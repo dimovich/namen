@@ -13,7 +13,6 @@ body {
     display: block ;
     font-family: Arial, sans-serif;
     font-size: 14px;
-    height: 941px;
     line-height: 20px;
     margin-bottom: 0px;
     margin-left: 0px;
@@ -106,8 +105,8 @@ label {
     font-size: 14px;
     height: 126px;
     line-height: 20px;
-    margin-left: 64px;
-    margin-right: 64px;
+    margin-left: auto;
+    margin-right: auto;
     margin-top: 20px;
     position: static;
     text-align:left;
@@ -140,8 +139,9 @@ label {
     font-size: 14px;
     height: 300px;
     line-height: 20px;
-    margin-left: 64px;
-    margin-right: 64px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 20px;
     padding-bottom: 20px;
     padding-left: 20px;
     padding-right: 20px;
