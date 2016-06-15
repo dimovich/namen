@@ -1,6 +1,6 @@
 (ns namen.core
   (:require [reagent.core :as r :refer [render]]
-            [domina.core :refer [by-id]]
+            [domina.core :refer [value by-id]]
             [domina.events :refer [listen! prevent-default]]
             [cljs.reader :refer [read-string]]
             [clojure.string :as s :refer [blank?]]
@@ -19,40 +19,32 @@
 (defn word-list [data]
   [:div.results
    (for [[word weight] @data]
-     [word-component word weight])])
-
-(defn set-data [d]
-  (println d)
-  (reset! data d))
+     ^{:key word} [word-component word weight])])
 
 
-(defn handle-words-on-click [words]
-  (println words)
-  (when-not (blank? @words)
-    (let [word-list (re-seq #"\w+" @words)]
-      (reset! words "")
+(defn handle-words [words]
+  (when-not (blank? words)
+    (let [ws (re-seq #"\w+" words)]
       (remote-callback :generate
-                       [word-list 33]
-                       #(reset! data %)
-                       ))))
+                       [ws 33]
+                       #(reset! data %)))))
 
 
 (defn word-form []
-  (let [words (r/atom "")]
+  (let [text (r/atom "")]
     (fn []
-      [:form#words-form
-       [:div
-        [:label {:for "words-input"} "Words:"]
-        [:input#words-input.words-input {:autofocus "autofocus"
-                                         :type "text"
-                                         :placeholder "Enter words..."
-                                         :value @words
-                                         :on-change #(reset! words (-> % .-target .-value))}]]
-       
-       [:div
-        [:input#generate-button.generate-button {:type "button"
-                                                 :value "Generate"
-                                                 :on-click #(handle-words-on-click words)}]]])))
+      [:div
+       [:label {:for "words-input"} "Words:"]
+       [:input.words-input {:type "text"
+                            :placeholder "Enter words..."
+                            :value @text
+                            :on-change #(reset! text (-> % .-target .-value))
+                            :on-key-press (fn [e]
+                                            (when (= 13 (.-charCode e))
+                                              (handle-words @text)))}]
+      
+       [:button.generate-button {:on-click #(handle-words @text)}
+        "Generate"]])))
 
 
 (defn box [data]
