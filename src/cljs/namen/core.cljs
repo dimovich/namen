@@ -4,7 +4,8 @@
             [domina.events :refer [listen! prevent-default]]
             [cljs.reader :refer [read-string]]
             [clojure.string :as s :refer [blank?]]
-            [shoreleave.remotes.http-rpc :refer [remote-callback]])
+            [shoreleave.remotes.http-rpc :refer [remote-callback]]
+            [cljsjs.react-bootstrap])
   
   (:require-macros [shoreleave.remotes.macros :as macros]))
 
@@ -47,8 +48,14 @@
         "Generate"]])))
 
 
+(def button (r/adapt-react-class (aget js/ReactBootstrap "Button")))
+
 (defn box [data]
   [:div
+   [button {:bs-style "success"
+            :bs-size "small"
+            :on-click #(js/alert "hello")}
+    "some button"]
    [word-form]
    [word-list data]])
 

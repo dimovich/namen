@@ -1,0 +1,12 @@
+TODO
+
+- Google API
+- Filter articles
+- Word Cloud
+- Fix multiple enter presses
+- Wikipedia
+
+
+
+
+http://stackoverflow.com/questions/19704477/adding-close-button-in-div-to-close-the-box

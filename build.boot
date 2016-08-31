@@ -26,7 +26,7 @@
                  [cljsjs/marked "0.3.5-0"]
                  [clj-http "2.2.0"]
                  [org.clojure/math.combinatorics "0.1.3"]
-                 ])
+                 [cljsjs/react-bootstrap "0.30.2-0"]])
 
 (require '[adzerk.boot-cljs :refer [cljs]]
          '[pandeiro.boot-http :refer [serve]]
@@ -81,12 +81,9 @@
      (watch :verbose verbose)
      (reload)
      (cljs-repl)
-     (test-cljs :out-file output-to 
-                :js-env testbed 
-                :namespaces namespaces
-                :update-fs? true
-                :optimizations optimizations)
-     (test :namespaces namespaces)
+     (cljs :compiler-options {:out-file output-to 
+                              :optimizations optimizations})
+
      (target :dir #{"target"}))))
 
 (deftask dev 
@@ -101,3 +98,12 @@
    (cljs-repl) ;; before cljs
    (cljs)
    (target :dir #{"target"})))
+
+
+
+(comment (test-cljs :out-file output-to 
+                    :js-env testbed 
+                    :namespaces namespaces
+                    :update-fs? true
+                    :optimizations optimizations)
+         (test :namespaces namespaces))
