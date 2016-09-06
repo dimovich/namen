@@ -22,7 +22,7 @@
                  [enlive "1.1.6"]
                  [adzerk/boot-test "1.1.0"]
                  [crisptrutski/boot-cljs-test "0.2.1"]
-                 [reagent "0.6.0-alpha2"]
+                 [reagent "0.6.0-rc"]
                  [cljsjs/marked "0.3.5-0"]
                  [clj-http "2.2.0"]
                  [org.clojure/math.combinatorics "0.1.3"]
@@ -38,7 +38,7 @@
 
 
 (swap! boot.repl/*default-dependencies*
-       concat '[[cider/cider-nrepl "0.12.0-SNAPSHOT"]
+       concat '[[cider/cider-nrepl "0.13.0"]
                 [refactor-nrepl "2.0.0-SNAPSHOT"]])
 
 (swap! boot.repl/*default-middleware*

@@ -5,7 +5,8 @@
             [clj-http.client :as client]
             [net.cgrand.enlive-html :as enlive]
             [shoreleave.middleware.rpc :refer [wrap-rpc defremote]]
-            [clojure.math.combinatorics :as math]))
+            [clojure.math.combinatorics :as math]
+            [namen.templates.index :refer [index]]))
 
 (def google-url "https://www.google.com/search?num=100&safe=off&site=&source=hp&q=")
 
@@ -13,7 +14,7 @@
 
 
 (defroutes handler
-  (GET "/" [] "Hello from Compojure!")  ;; for testing only
+  (GET "/" [] (index))                  ;; for testing only
   (files "/" {:root "target"})          ;; to serve static resources
   (resources "/" {:root "target"})      ;; to serve anything else
   (not-found "Page Not Found"))         ;; page not found
@@ -68,6 +69,7 @@
 
 
 (defremote generate [search-terms how-many]
+  (println "generating...")
   (->> search-terms
        get-combinations
        (map #(get-top-word-frequencies %))
