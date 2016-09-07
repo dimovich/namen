@@ -5,7 +5,8 @@
             [cljs.reader :refer [read-string]]
             [clojure.string :as s :refer [blank?]]
             [shoreleave.remotes.http-rpc :refer [remote-callback]]
-            [cljsjs.react-bootstrap])
+            [cljsjs.react-bootstrap]
+            [namen.util :refer [bootstrap]])
   
   (:require-macros [shoreleave.remotes.macros :as macros]))
 
@@ -44,7 +45,6 @@
 
 
 
-
 (def button (r/adapt-react-class (aget js/ReactBootstrap "Button")))
 (def navbar (r/adapt-react-class (aget js/ReactBootstrap "Navbar")))
 (def navbar-form (r/adapt-react-class (aget js/ReactBootstrap "Navbar" "Form")))
@@ -64,19 +64,21 @@
 (defn input-form []
   (let [text (r/atom "")]
     (fn []
-      [form
-       [form-group
-        [input-group
-         [form-control {:type "text" :placeholder "insert keywords"
-                        :value @text
-                        :on-change #(reset! text (-> % .-target .-value))
-                        :on-key-press (fn [e]
-                                        (when (= 13 (.-charCode e))
-                                          (handle-words @text)
-                                          (prevent-default e)))}]
-         [input-group-button
-          [button {:on-click #(handle-words @text)}
-           "Generate"]]]]])))
+      [form-group
+       [input-group
+        [form-control {:type "text"
+                       :placeholder "insert keywords"
+                       :value @text
+                       :on-change #(reset! text (-> % .-target .-value))
+                       :on-submit #(prevent-default %)
+                       :on-key-press (fn [e]
+                                       (when (= 13 (.-charCode e))
+                                         (.click (by-id "generate"))))}]
+        [input-group-button
+         [button {:id "generate"
+                  :type "button"
+                  :on-click #(handle-words @text)}
+          "Generate"]]]])))
 
 
 (defn word-component [word weight]
@@ -105,15 +107,21 @@
      [col {:md 12}
       [row
        [col {:md 8}
-        [panel {:header "Google"}
+        [panel {:header "Google"
+                :collapsible true
+                :default-expanded true}
          [word-list (get-in @state [:results :google])]]]]
       [row
        [col {:md 8}
-        [panel {:header "Wikipedia"}]]]
+        [panel {:header "Wikipedia"
+                :collapsible true
+                :default-expanded true}]]]
 
       [row
        [col {:md 8}
-        [panel {:header "Thesaurus"}]]]]]]])
+        [panel {:header "Thesaurus"
+                :collapsible true
+                :default-expanded true}]]]]]]])
 
 
 (defn box [state]

@@ -69,7 +69,6 @@
 
 
 (defremote generate [search-terms how-many]
-  (println "generating...")
   (->> search-terms
        get-combinations
        (map #(get-top-word-frequencies %))
