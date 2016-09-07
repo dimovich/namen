@@ -5,8 +5,7 @@
             [cljs.reader :refer [read-string]]
             [clojure.string :as s :refer [blank?]]
             [shoreleave.remotes.http-rpc :refer [remote-callback]]
-            [cljsjs.react-bootstrap]
-            [namen.util :refer [bootstrap]])
+            [cljsjs.react-bootstrap])
   
   (:require-macros [shoreleave.remotes.macros :as macros]))
 
@@ -17,13 +16,6 @@
                              :wikipedia []}
                    :loading false
                    :results-visible true}))
-
-(defn handle-words [words]
-  (let [ws (re-seq #"\w+" words)]
-    (remote-callback :generate
-                     [ws 33]
-                     #(swap! data assoc-in [:results :google] %))))
-
 
 
 (comment (defn loading-button [f id l nl]
@@ -43,23 +35,33 @@
                    nl)]]))))
 
 
+(defn handle-words [words]
+  (let [ws (re-seq #"\w+" words)]
+    (remote-callback :generate
+                     [ws 33]
+                     #(swap! data assoc-in [:results :google] %))))
 
 
-(def button (r/adapt-react-class (aget js/ReactBootstrap "Button")))
-(def navbar (r/adapt-react-class (aget js/ReactBootstrap "Navbar")))
-(def navbar-form (r/adapt-react-class (aget js/ReactBootstrap "Navbar" "Form")))
-(def form-control (r/adapt-react-class (aget js/ReactBootstrap "FormControl")))
-(def form-group (r/adapt-react-class (aget js/ReactBootstrap "FormGroup")))
-(def form (r/adapt-react-class (aget js/ReactBootstrap "Form")))
-(def control-label (r/adapt-react-class (aget js/ReactBootstrap "ControlLabel")))
-(def grid (r/adapt-react-class (aget js/ReactBootstrap "Grid")))
-(def row (r/adapt-react-class (aget js/ReactBootstrap "Row")))
-(def col (r/adapt-react-class (aget js/ReactBootstrap "Col")))
-(def page-header (r/adapt-react-class (aget js/ReactBootstrap "PageHeader")))
-(def panel (r/adapt-react-class (aget js/ReactBootstrap "Panel")))
-(def input-group (r/adapt-react-class (aget js/ReactBootstrap "InputGroup")))
-(def input-group-button (r/adapt-react-class (aget js/ReactBootstrap "InputGroup" "Button")))
-(def fade (r/adapt-react-class (aget js/ReactBootstrap "Fade")))
+(defn bootstrap [& args]
+  (r/adapt-react-class (apply aget js/ReactBootstrap args)))
+
+(def button (bootstrap "Button"))
+(def navbar (bootstrap "Navbar"))
+(def navbar-form (bootstrap"Navbar" "Form"))
+(def form-control (bootstrap "FormControl"))
+(def form-group (bootstrap "FormGroup"))
+(def form (bootstrap "Form"))
+(def control-label (bootstrap "ControlLabel"))
+(def grid (bootstrap "Grid"))
+(def row (bootstrap "Row"))
+(def col (bootstrap "Col"))
+(def page-header (bootstrap "PageHeader"))
+(def panel (bootstrap "Panel"))
+(def input-group (bootstrap "InputGroup"))
+(def input-group-button (bootstrap "InputGroup" "Button"))
+(def fade (bootstrap "Fade"))
+
+
 
 (defn input-form []
   (let [text (r/atom "")]
@@ -139,5 +141,4 @@
 
 
 ;; TODO
-;; prevent submit on enter
 ;; results in columns
