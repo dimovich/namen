@@ -11,70 +11,38 @@
 
 
 ;;word, weight
-(def data (r/atom {:results []
+(def data (r/atom {:results {:google []
+                             :thesaurus []
+                             :wikipedia []}
                    :loading false
-                   :results-visible false}))
-
-(defn word-component [word weight]
-  [:div#word.word word])
-
-
-(defn word-list [data]
-  [:div.results
-   (for [[word weight] (:results @data)]
-     ^{:key word} [word-component word weight])])
-
+                   :results-visible true}))
 
 (defn handle-words [words]
   (let [ws (re-seq #"\w+" words)]
-    (println "calling remote...")
     (remote-callback :generate
                      [ws 33]
-                     #(swap! data assoc :results  % :loading false))))
+                     #(swap! data assoc-in [:results :google] %))))
 
 
 
+(comment (defn loading-button [f id l nl]
+           (let [loading (r/atom false)]
+             (fn []
+               [:div
+                [button {:id id
+                         :bs-style "primary"
+                         :disabled (:loading @data)
+                         :on-click (fn []
+                                     (when-not (:loading @data)
+                                       (do
+                                         (swap! data assoc :loading true)
+                                         (f))))}
+                 (if (:loading @data)
+                   l
+                   nl)]]))))
 
 
 
-
-
-(defn loading-button [f id l nl]
-  (let [loading (r/atom false)]
-    (fn []
-      [:div
-       [button {:id id
-                :bs-style "primary"
-                :disabled (:loading @data)
-                :on-click (fn []
-                            (when-not (:loading @data)
-                              (do
-                                (swap! data assoc :loading true)
-                                (f))))}
-        (if (:loading @data)
-          l
-          nl)]])))
-
-
-(defn word-form []
-  (let [text (r/atom "")]
-    (fn []
-      [:div
-       [:label {:for "words-input"} "Words:"]
-       [:input.words-input {:type "text"
-                            :placeholder "Enter words..."
-                            :value @text
-                            :on-change #(reset! text (-> % .-target .-value))
-                            :on-key-press (fn [e]
-                                            (when (= 13 (.-charCode e))
-                                              (.click (by-id "generate"))))}]
-
-       [loading-button #(when-not (blank? @text)
-                          (handle-words @text)) "generate" "Generating..." "Generate"]])))
-
-
-(comment [:button.generate-button {:on-click #(handle-words @text)}
-          "Generate"])
 
 
 (def button (r/adapt-react-class (aget js/ReactBootstrap "Button")))
@@ -93,6 +61,33 @@
 (def input-group-button (r/adapt-react-class (aget js/ReactBootstrap "InputGroup" "Button")))
 (def fade (r/adapt-react-class (aget js/ReactBootstrap "Fade")))
 
+(defn input-form []
+  (let [text (r/atom "")]
+    (fn []
+      [form
+       [form-group
+        [input-group
+         [form-control {:type "text" :placeholder "insert keywords"
+                        :value @text
+                        :on-change #(reset! text (-> % .-target .-value))
+                        :on-key-press (fn [e]
+                                        (when (= 13 (.-charCode e))
+                                          (handle-words @text)
+                                          (prevent-default e)))}]
+         [input-group-button
+          [button {:on-click #(handle-words @text)}
+           "Generate"]]]]])))
+
+
+(defn word-component [word weight]
+  [:div.word
+   word])
+
+
+(defn word-list [data]
+  [:div.3columns
+   (for [[word weight] data]
+     ^{:key word} [word-component word weight])])
 
 
 
@@ -103,25 +98,22 @@
      [page-header  "Namen Ramen Generator"]]]
    [row
     [col {:md 8}
-     [form
-      [form-group
-       [input-group
-        [form-control {:type "text" :placeholder "insert keywords"}]
-        [input-group-button
-         [button {:type "submit"}
-          "Generate"]]]]]]]
-   [fade
+     [input-form]]]
+   
+   [fade {:in (:results-visible @state)}
     [row
-     [col {:md 8}
-      [panel {:header "Google"}]]]
+     [col {:md 12}
+      [row
+       [col {:md 8}
+        [panel {:header "Google"}
+         [word-list (get-in @state [:results :google])]]]]
+      [row
+       [col {:md 8}
+        [panel {:header "Wikipedia"}]]]
 
-    [row
-     [col {:md 8}
-      [panel {:header "Wikipedia"}]]]
-
-    [row
-     [col {:md 8}
-      [panel {:header "Thesaurus"}]]]]])
+      [row
+       [col {:md 8}
+        [panel {:header "Thesaurus"}]]]]]]])
 
 
 (defn box [state]
@@ -135,3 +127,9 @@
   (when (and js/document
              (aget js/document "getElementById"))
     (render [box data] (by-id "app"))))
+
+
+
+;; TODO
+;; prevent submit on enter
+;; results in columns

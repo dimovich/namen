@@ -1,9 +1,8 @@
-p.3columns {
-    -webkit-column-count: 3; /* Chrome, Safari, Opera */
-    -moz-column-count:    3; /* Firefox */
+.3columns {
     column-count:         3;
-    -webkit-column-gap:   20px; /* Chrome, Safari, Opera */
-    
-    -moz-column-gap:      20px; /* Firefox */
-    column-gap: 20px;
+}
+
+
+.word {
+    column-span: all;
 }
