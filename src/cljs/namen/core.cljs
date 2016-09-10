@@ -14,25 +14,9 @@
 (def data (r/atom {:results {:google []
                              :thesaurus []
                              :wikipedia []}
-                   :loading false
                    :results-visible true}))
 
 
-(comment (defn loading-button [f id l nl]
-           (let [loading (r/atom false)]
-             (fn []
-               [:div
-                [button {:id id
-                         :bs-style "primary"
-                         :disabled (:loading @data)
-                         :on-click (fn []
-                                     (when-not (:loading @data)
-                                       (do
-                                         (swap! data assoc :loading true)
-                                         (f))))}
-                 (if (:loading @data)
-                   l
-                   nl)]]))))
 
 
 (defn handle-words [words]
@@ -62,9 +46,26 @@
 (def fade (bootstrap "Fade"))
 
 
+(defn loading-button [{:keys [state on-click etext dtext opts]}]
+  [:div
+   [button (assoc opts
+                  :bs-style "primary"
+                  :disabled (@state)
+                  :type "button"
+                  :on-click (fn []
+                              (when-not @state
+                                (do
+                                  (reset! state true)
+                                  (on-click)))))
+    (if @state
+      dtext
+      etext)]])
+
+
 
 (defn input-form []
-  (let [text (r/atom "")]
+  (let [text (r/atom "")
+        loading (r/atom false)]
     (fn []
       [form-group
        [input-group
@@ -72,15 +73,16 @@
                        :placeholder "insert keywords"
                        :value @text
                        :on-change #(reset! text (-> % .-target .-value))
-                       :on-submit #(prevent-default %)
+                       :on-submit #(prevent-default %) ;; do we need this?
                        :on-key-press (fn [e]
                                        (when (= 13 (.-charCode e))
                                          (.click (by-id "generate"))))}]
         [input-group-button
-         [button {:id "generate"
-                  :type "button"
-                  :on-click #(handle-words @text)}
-          "Generate"]]]])))
+         [loading-button {:etext "Generate"
+                          :dtext "Generating..."
+                          :opts {:id "generate"}
+                          :state loading
+                          :on-click #(handle-words @text)}]]]])))
 
 
 (defn word-component [word weight]
