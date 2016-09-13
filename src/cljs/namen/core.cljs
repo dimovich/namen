@@ -22,6 +22,7 @@
                    :results-visible true}))
 
 
+(def config {:result-size 30})
 
 ;;
 ;; get results from server
@@ -29,7 +30,7 @@
 (defn handle-words [words]
   (let [ws (re-seq #"\w+" words)]
     (remote-callback :generate
-                     [ws 33]
+                     [ws (:result-size config)]
                      #(swap! data assoc-in [:results :google] %))))
 
 
@@ -58,11 +59,12 @@
 
 
 (defn word-list [data]
-  [:div
-   (for [[word weight :as item] @data]
-     ^{:key word}
-     [:div.word {:on-click #(swap! data disj item)}
-      word])])
+  [row
+   (for [p (partition-all (/ (:result-size config) 3) @data)]
+     [col {:md 4}
+      (for [[word weight :as item] p]
+        ^{:key word} [:div.word {:on-click #(swap! data disj item)}
+                      word])])])
 
 
 
@@ -117,5 +119,5 @@
 
 ;; TODO
 ;; ----
-;; results in columns
+;; - deleted words leave empty space
 ;;
