@@ -1,24 +1,31 @@
 (ns namen.core
   (:require [reagent.core :as r :refer [render]]
-            [domina.core :refer [value by-id]]
+            [domina.core :refer [value by-id destroy!]]
             [domina.events :refer [listen! prevent-default]]
             [cljs.reader :refer [read-string]]
             [clojure.string :as s :refer [blank?]]
             [shoreleave.remotes.http-rpc :refer [remote-callback]]
-            [cljsjs.react-bootstrap])
+            [namen.bootstrap :refer [button navbar navbar-form
+                                     form-control form-group form
+                                     control-label grid row col
+                                     page-header panel input-group
+                                     input-group-button fade
+                                     loading-button]])
   
   (:require-macros [shoreleave.remotes.macros :as macros]))
 
 
-;;word, weight
-(def data (r/atom {:results {:google []
-                             :thesaurus []
-                             :wikipedia []}
+;; app state
+(def data (r/atom {:results {:google #{}
+                             :thesaurus #{}
+                             :wikipedia #{}}
                    :results-visible true}))
 
 
 
-
+;;
+;; get results from server
+;;
 (defn handle-words [words]
   (let [ws (re-seq #"\w+" words)]
     (remote-callback :generate
@@ -26,46 +33,9 @@
                      #(swap! data assoc-in [:results :google] %))))
 
 
-(defn bootstrap [& args]
-  (r/adapt-react-class (apply aget js/ReactBootstrap args)))
 
-(def button (bootstrap "Button"))
-(def navbar (bootstrap "Navbar"))
-(def navbar-form (bootstrap"Navbar" "Form"))
-(def form-control (bootstrap "FormControl"))
-(def form-group (bootstrap "FormGroup"))
-(def form (bootstrap "Form"))
-(def control-label (bootstrap "ControlLabel"))
-(def grid (bootstrap "Grid"))
-(def row (bootstrap "Row"))
-(def col (bootstrap "Col"))
-(def page-header (bootstrap "PageHeader"))
-(def panel (bootstrap "Panel"))
-(def input-group (bootstrap "InputGroup"))
-(def input-group-button (bootstrap "InputGroup" "Button"))
-(def fade (bootstrap "Fade"))
-
-
-(defn loading-button [{:keys [state on-click etext dtext opts]}]
-  [:div
-   [button (assoc opts
-                  :bs-style "primary"
-                  :disabled (@state)
-                  :type "button"
-                  :on-click (fn []
-                              (when-not @state
-                                (do
-                                  (reset! state true)
-                                  (on-click)))))
-    (if @state
-      dtext
-      etext)]])
-
-
-
-(defn input-form []
-  (let [text (r/atom "")
-        loading (r/atom false)]
+(defn input-form [state]
+  (let [text (r/atom "")]
     (fn []
       [form-group
        [input-group
@@ -81,19 +51,19 @@
          [loading-button {:etext "Generate"
                           :dtext "Generating..."
                           :opts {:id "generate"}
-                          :state loading
+                          :state state
+                          :state-key :results
                           :on-click #(handle-words @text)}]]]])))
 
 
-(defn word-component [word weight]
-  [:div.word
-   word])
-
 
 (defn word-list [data]
-  [:div.3columns
-   (for [[word weight] data]
-     ^{:key word} [word-component word weight])])
+  [:div
+   (for [[word weight :as item] @data]
+     ^{:key word}
+     [:div.word {:on-click #(swap! data disj item)}
+      word])])
+
 
 
 
@@ -101,10 +71,10 @@
   [grid
    [row
     [col {:md 8}
-     [page-header  "Namen Ramen Generator"]]]
+     [page-header "Ramen Generator"]]]
    [row
     [col {:md 8}
-     [input-form]]]
+     [input-form state]]]
    
    [fade {:in (:results-visible @state)}
     [row
@@ -114,18 +84,21 @@
         [panel {:header "Google"
                 :collapsible true
                 :default-expanded true}
-         [word-list (get-in @state [:results :google])]]]]
+         [word-list (r/cursor state [:results :google])]]]]
       [row
        [col {:md 8}
         [panel {:header "Wikipedia"
                 :collapsible true
-                :default-expanded true}]]]
+                :default-expanded true}
+         [word-list (r/cursor state [:results :wikipedia])]]]]
 
       [row
        [col {:md 8}
         [panel {:header "Thesaurus"
                 :collapsible true
-                :default-expanded true}]]]]]]])
+                :default-expanded true}
+         [word-list (r/cursor state [:results :thesaurus])]]]]]]]])
+
 
 
 (defn box [state]
@@ -143,4 +116,6 @@
 
 
 ;; TODO
+;; ----
 ;; results in columns
+;;

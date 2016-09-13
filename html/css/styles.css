@@ -6,3 +6,9 @@
 .word {
     column-span: all;
 }
+
+.word:hover {
+    text-decoration: line-through;
+    color: red;
+    cursor: pointer;
+}
