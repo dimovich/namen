@@ -6,10 +6,11 @@
             [net.cgrand.enlive-html :as enlive]
             [shoreleave.middleware.rpc :refer [wrap-rpc defremote]]
             [clojure.math.combinatorics :as math]
-            [namen.templates.index :refer [index]]))
+            [namen.templates.index :refer [index]]
+            [cheshire.core :as json]))
 
 
-(def app (atom {:retry-time 1000}))
+(def config {:retry-time 1000})
 
 ;;(def google-url "https://www.google.com/search?num=100&safe=off&site=&source=hp&q=")
 (def google-url "https://www.google.com/search")
@@ -21,7 +22,7 @@
       (println "[trying " n "]")
       (f)
       (catch Throwable _
-        (do (Thread/sleep (:retry-time @app))
+        (do (Thread/sleep (:retry-time config))
             (try-n-times f (dec n)))))))
 
 (defmacro try3 [& body]
@@ -63,6 +64,58 @@
       enlive/html-resource))
 
 
+
+(defn conceptnet-lookup [term]
+  (let [url "http://conceptnet5.media.mit.edu/data/5.4/c/en/"
+        res (-> (str url term)
+                (client/get {:headers client-headers
+                             :query-params {"limit" 10}})
+                :body
+                json/parse-string)]
+    (map (fn [{:strs [start surfaceStart surfaceEnd]}]
+           (if (= start (str "/c/en/" term))
+             surfaceEnd
+             surfaceStart))
+         (res "edges"))))
+
+
+
+(defn conceptnet-search [term & [rel]]
+  (let [relations {:has-property "/r/HasProperty"
+                   :capable-of "/r/CapableOf"
+                   :used-for "/r/UsedFor"
+                   :related-to "/r/RelatedTo"}
+        rel (relations (or rel :related-to))
+        url "http://conceptnet5.media.mit.edu/data/5.4/search"
+        res (-> url
+                (client/get {:headers client-headers
+                             :query-params {"limit" 10
+                                            "rel" rel
+                                            "end" (str "/c/en/" term)}})
+                :body
+                json/parse-string)]
+    (map (fn [{:strs [start surfaceStart surfaceEnd]}]
+           (if (= start (str "/c/en/" term))
+             surfaceEnd
+             surfaceStart))
+         (res "edges"))))
+
+
+(defn conceptnet-assoc [term]
+  (let [url "http://conceptnet5.media.mit.edu/data/5.4/assoc/list/en/"
+        res (-> (str url term)
+                (client/get {:headers client-headers
+                             :query-params {"limit" 10}})
+                :body
+                json/parse-string)]
+    (map (fn [[c w]]
+           (-> (re-seq #"\w+$" c)
+               first
+               (or "")
+               (clojure.string/replace #"_" " ")))
+         (res "similar"))))
+
+
 (defn get-dom-text [dom]
   (for [st (enlive/select dom [[:span (enlive/attr= :class "st")]])]
     (enlive/text st)))
@@ -96,17 +149,26 @@
 
 
 (defremote generate [search-terms how-many]
-  (->> search-terms
-       get-combinations
-       (map #(get-top-word-frequencies %))
-       (reduce #(merge-with + %1 %2))
-       (sort-by val)
-       reverse
-       (take how-many)
-       (into #{})))
+  (let [google (->> search-terms
+                    get-combinations
+                    (map #(get-top-word-frequencies %))
+                    (reduce #(merge-with + %1 %2))
+                    (sort-by val)
+                    reverse
+                    (take how-many)
+                    (map first)
+                    (into #{}))
+        conceptnet (let [fns [conceptnet-lookup conceptnet-search conceptnet-assoc]]
+                     (->> search-terms
+                          (map (fn [t]
+                                 (for [f fns]
+                                   (f t))))
+                          flatten
+                          (into #{})))]
+    {:google google
+     :conceptnet conceptnet}))
 
 
 ;;TODO
 ;; - search API
-;; - conceptNet API
 ;; - again lib

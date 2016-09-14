@@ -16,9 +16,7 @@
 
 
 ;; app state
-(def data (r/atom {:results {:google #{}
-                             :thesaurus #{}
-                             :wikipedia #{}}
+(def data (r/atom {:results {}
                    :results-visible true}))
 
 
@@ -31,7 +29,7 @@
   (let [ws (re-seq #"\w+" words)]
     (remote-callback :generate
                      [ws (:result-size config)]
-                     #(swap! data assoc-in [:results :google] %))))
+                     #(swap! data assoc-in [:results] %))))
 
 
 
@@ -60,10 +58,10 @@
 
 (defn word-list [data]
   [row
-   (for [p (partition-all (/ (:result-size config) 3) @data)]
+   (for [p (partition-all (/ (count @data) 3) @data)]
      [col {:md 4}
-      (for [[word weight :as item] p]
-        ^{:key word} [:div.word {:on-click #(swap! data disj item)}
+      (for [word p]
+        ^{:key word} [:div.word {:on-click #(swap! data disj word)}
                       word])])])
 
 
@@ -89,17 +87,10 @@
          [word-list (r/cursor state [:results :google])]]]]
       [row
        [col {:md 8}
-        [panel {:header "Wikipedia"
+        [panel {:header "ConceptNet"
                 :collapsible true
                 :default-expanded true}
-         [word-list (r/cursor state [:results :wikipedia])]]]]
-
-      [row
-       [col {:md 8}
-        [panel {:header "Thesaurus"
-                :collapsible true
-                :default-expanded true}
-         [word-list (r/cursor state [:results :thesaurus])]]]]]]]])
+         [word-list (r/cursor state [:results :conceptnet])]]]]]]]])
 
 
 
