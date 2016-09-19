@@ -64,12 +64,24 @@
       enlive/html-resource))
 
 
+(defn conceptnet-normalize [term]
+  (let [url "http://conceptnet5.media.mit.edu/data/5.4/uri"
+        res (-> url
+                (client/get {:headers client-headers
+                             :query-params {"language" "en"
+                                            "text" term}})
+                :body
+                json/parse-string)]
+    (->> (res "uri")
+         (re-seq #"\w+$")
+         first)))
+
 
 (defn conceptnet-lookup [term]
   (let [url "http://conceptnet5.media.mit.edu/data/5.4/c/en/"
         res (-> (str url term)
                 (client/get {:headers client-headers
-                             :query-params {"limit" 10}})
+                             :query-params {"limit" 15}})
                 :body
                 json/parse-string)]
     (map (fn [{:strs [start surfaceStart surfaceEnd]}]
@@ -89,7 +101,7 @@
         url "http://conceptnet5.media.mit.edu/data/5.4/search"
         res (-> url
                 (client/get {:headers client-headers
-                             :query-params {"limit" 10
+                             :query-params {"limit" 15
                                             "rel" rel
                                             "end" (str "/c/en/" term)}})
                 :body
@@ -105,7 +117,7 @@
   (let [url "http://conceptnet5.media.mit.edu/data/5.4/assoc/list/en/"
         res (-> (str url term)
                 (client/get {:headers client-headers
-                             :query-params {"limit" 10}})
+                             :query-params {"limit" 15}})
                 :body
                 json/parse-string)]
     (map (fn [[c w]]
@@ -158,11 +170,20 @@
                     (take how-many)
                     (map first)
                     (into #{}))
-        conceptnet (let [fns [conceptnet-lookup conceptnet-search conceptnet-assoc]]
-                     (->> search-terms
-                          (map (fn [t]
-                                 (for [f fns]
-                                   (f t))))
+
+        conceptnet (let [search-terms (map conceptnet-normalize search-terms)
+                         ;; single terms
+                         tsks {search-terms
+                               [conceptnet-lookup conceptnet-search conceptnet-assoc]}
+                         ;; combination of terms
+                         tsks (if (< 1 (count search-terms))
+                                (assoc tsks
+                                       (list (apply str (interpose \, search-terms)))
+                                       [conceptnet-assoc])
+                                tsks)]
+                     (->> (map #(for [t (first %) f (second %)]
+                                  (f t))
+                               tsks)
                           flatten
                           (into #{})))]
     {:google google
