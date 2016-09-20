@@ -29,7 +29,15 @@
   (let [ws (re-seq #"\w+" words)]
     (remote-callback :generate
                      [ws (:result-size config)]
-                     #(swap! data assoc-in [:results] %))))
+                     (fn [res]
+                       (->> res
+                            (reduce (fn [m [k v]]
+                                      (assoc m
+                                             k
+                                             ;;[[word visible] ...]
+                                             (vec (map #(identity [% true]) v)))) 
+                                    {})
+                            (swap! data assoc-in [:results]))))))
 
 
 
@@ -56,13 +64,27 @@
 
 
 
+(comment (for [word p]
+           ^{:key word} [:li.word {:on-click #(swap! data disj word)}
+                         word]))
+
+
 (defn word-list [data]
   [row
-   (for [p (partition-all (/ (count @data) 3) @data)]
-     [col {:md 4}
-      (for [word p]
-        ^{:key word} [:div.word {:on-click #(swap! data disj word)}
-                      word])])])
+   (let [size (/ (count @data) 3)]
+     (map-indexed
+      (fn [idx1 xs]
+        [col {:md 4}
+         (map-indexed
+          (fn [idx2 [word visible]]
+            (println idx2 idx1)
+            ^{:key word} [(keyword (str "li.word" (when-not visible ".myhidden")))
+                          {:on-click #(swap! data update-in
+                                             [(+ idx2 (* size idx1)) 1]
+                                             not)}
+                          word])
+          xs)])
+      (partition-all size @data)))])
 
 
 
@@ -111,4 +133,5 @@
 ;; TODO
 ;; ----
 ;; - deleted words leave empty space
+;; - CSS columns instead of manually dividing the list
 ;;

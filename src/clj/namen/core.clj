@@ -19,7 +19,6 @@
   (if (zero? n)
     (f)
     (try
-      (println "[trying " n "]")
       (f)
       (catch Throwable _
         (do (Thread/sleep (:retry-time config))
@@ -64,7 +63,7 @@
       enlive/html-resource))
 
 
-(defn conceptnet-normalize [term]
+(defn cn-normalize [term]
   (let [url "http://conceptnet5.media.mit.edu/data/5.4/uri"
         res (-> url
                 (client/get {:headers client-headers
@@ -77,22 +76,25 @@
          first)))
 
 
-(defn conceptnet-lookup [term]
+(defn get-cn-surface [term {:strs [start end surfaceStart surfaceEnd]}]
+  (let [[start end] (map #(first (re-seq #"\w+$" %)) [start end])]
+    (if (= term start)
+      end
+      (or surfaceStart end))))
+
+
+(defn cn-lookup [term]
   (let [url "http://conceptnet5.media.mit.edu/data/5.4/c/en/"
         res (-> (str url term)
                 (client/get {:headers client-headers
                              :query-params {"limit" 15}})
                 :body
                 json/parse-string)]
-    (map (fn [{:strs [start surfaceStart surfaceEnd]}]
-           (if (= start (str "/c/en/" term))
-             surfaceEnd
-             surfaceStart))
-         (res "edges"))))
+    (map #(get-cn-surface term %) (res "edges"))))
 
 
 
-(defn conceptnet-search [term & [rel]]
+(defn cn-search [term & [rel]]
   (let [relations {:has-property "/r/HasProperty"
                    :capable-of "/r/CapableOf"
                    :used-for "/r/UsedFor"
@@ -106,14 +108,11 @@
                                             "end" (str "/c/en/" term)}})
                 :body
                 json/parse-string)]
-    (map (fn [{:strs [start surfaceStart surfaceEnd]}]
-           (if (= start (str "/c/en/" term))
-             surfaceEnd
-             surfaceStart))
-         (res "edges"))))
+    (map #(get-cn-surface term %) (res "edges"))))
 
 
-(defn conceptnet-assoc [term]
+
+(defn cn-assoc [term]
   (let [url "http://conceptnet5.media.mit.edu/data/5.4/assoc/list/en/"
         res (-> (str url term)
                 (client/get {:headers client-headers
@@ -122,9 +121,7 @@
                 json/parse-string)]
     (map (fn [[c w]]
            (-> (re-seq #"\w+$" c)
-               first
-               (or "")
-               (clojure.string/replace #"_" " ")))
+               first))
          (res "similar"))))
 
 
@@ -160,34 +157,36 @@
        frequencies))
 
 
-(defremote generate [search-terms how-many]
-  (let [google (->> search-terms
-                    get-combinations
-                    (map #(get-top-word-frequencies %))
-                    (reduce #(merge-with + %1 %2))
-                    (sort-by val)
-                    reverse
-                    (take how-many)
-                    (map first)
-                    (into #{}))
+(comment google (->> search-terms
+                     get-combinations
+                     (map #(get-top-word-frequencies %))
+                     (reduce #(merge-with + %1 %2))
+                     (sort-by val)
+                     reverse
+                     (take how-many)
+                     (map first)
+                     (into #{})))
 
-        conceptnet (let [search-terms (map conceptnet-normalize search-terms)
-                         ;; single terms
-                         tsks {search-terms
-                               [conceptnet-lookup conceptnet-search conceptnet-assoc]}
-                         ;; combination of terms
-                         tsks (if (< 1 (count search-terms))
-                                (assoc tsks
-                                       (list (apply str (interpose \, search-terms)))
-                                       [conceptnet-assoc])
-                                tsks)]
-                     (->> (map #(for [t (first %) f (second %)]
-                                  (f t))
-                               tsks)
-                          flatten
-                          (into #{})))]
-    {:google google
-     :conceptnet conceptnet}))
+(defremote generate [search-terms how-many]
+  (let [cn (let [search-terms (map #(try3 (cn-normalize %)) search-terms)
+                 ;; single terms
+                 tsks {search-terms
+                       [cn-lookup cn-search cn-assoc]}
+                 ;; combination of terms
+                 tsks (if (< 1 (count search-terms))
+                        (assoc tsks
+                               (list (apply str (interpose \, search-terms)))
+                               [cn-assoc])
+                        tsks)]
+             (->> (map #(for [t (first %) f (second %)]
+                          (try3 (f t)))
+                       tsks)
+                  flatten
+                  (remove nil?)
+                  (map #(clojure.string/replace % "_" " "))
+                  distinct))]
+    { ;;:google google
+     :conceptnet cn}))
 
 
 ;;TODO
