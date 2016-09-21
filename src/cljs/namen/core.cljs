@@ -71,13 +71,12 @@
 
 (defn word-list [data]
   [row
-   (let [size (/ (count @data) 3)]
+   (let [size (int (/ (count @data) 3))] ;;FIXME: rounding issues
      (map-indexed
       (fn [idx1 xs]
         [col {:md 4}
          (map-indexed
           (fn [idx2 [word visible]]
-            (println idx2 idx1)
             ^{:key word} [(keyword (str "li.word" (when-not visible ".myhidden")))
                           {:on-click #(swap! data update-in
                                              [(+ idx2 (* size idx1)) 1]

@@ -42,5 +42,3 @@
         (if @loading
           dtext
           etext)]])))
-
-

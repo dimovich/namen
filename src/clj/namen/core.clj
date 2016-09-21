@@ -48,16 +48,18 @@
       (site)))
 
 
+(defn http-get [url opts]
+  (let [opts (assoc opts :throw-entire-message? true)]
+    (try3 (client/get url opts))))
+
 
 (defn get-parsed-html
   [url term]
-  (-> (try3 (client/get url
-                        {:headers client-headers
-                         :throw-entire-message? true
-                         :query-params {"num" "100"
-                                        "safe" "off"
-                                        "source" "hp"
-                                        "q" term}}))
+  (-> (http-get url {:headers client-headers
+                     :query-params {"num" "100"
+                                    "safe" "off"
+                                    "source" "hp"
+                                    "q" term}})
       :body
       java.io.StringReader.
       enlive/html-resource))
@@ -65,10 +67,9 @@
 
 (defn cn-normalize [term]
   (let [url "http://conceptnet5.media.mit.edu/data/5.4/uri"
-        res (-> url
-                (client/get {:headers client-headers
-                             :query-params {"language" "en"
-                                            "text" term}})
+        res (-> (http-get url {:headers client-headers
+                               :query-params {"language" "en"
+                                              "text" term}})
                 :body
                 json/parse-string)]
     (->> (res "uri")
@@ -76,7 +77,7 @@
          first)))
 
 
-(defn get-cn-surface [term {:strs [start end surfaceStart surfaceEnd]}]
+(defn get-cn-surface [term {:strs [start end surfaceStart]}]
   (let [[start end] (map #(first (re-seq #"\w+$" %)) [start end])]
     (if (= term start)
       end
@@ -86,8 +87,8 @@
 (defn cn-lookup [term]
   (let [url "http://conceptnet5.media.mit.edu/data/5.4/c/en/"
         res (-> (str url term)
-                (client/get {:headers client-headers
-                             :query-params {"limit" 15}})
+                (http-get {:headers client-headers
+                           :query-params {"limit" 15}})
                 :body
                 json/parse-string)]
     (map #(get-cn-surface term %) (res "edges"))))
@@ -101,11 +102,10 @@
                    :related-to "/r/RelatedTo"}
         rel (relations (or rel :related-to))
         url "http://conceptnet5.media.mit.edu/data/5.4/search"
-        res (-> url
-                (client/get {:headers client-headers
-                             :query-params {"limit" 15
-                                            "rel" rel
-                                            "end" (str "/c/en/" term)}})
+        res (-> (http-get url {:headers client-headers
+                               :query-params {"limit" 15
+                                              "rel" rel
+                                              "end" (str "/c/en/" term)}})
                 :body
                 json/parse-string)]
     (map #(get-cn-surface term %) (res "edges"))))
@@ -115,8 +115,8 @@
 (defn cn-assoc [term]
   (let [url "http://conceptnet5.media.mit.edu/data/5.4/assoc/list/en/"
         res (-> (str url term)
-                (client/get {:headers client-headers
-                             :query-params {"limit" 15}})
+                (http-get {:headers client-headers
+                           :query-params {"limit" 15}})
                 :body
                 json/parse-string)]
     (map (fn [[c w]]
@@ -125,11 +125,13 @@
          (res "similar"))))
 
 
+;; for google
 (defn get-dom-text [dom]
   (for [st (enlive/select dom [[:span (enlive/attr= :class "st")]])]
     (enlive/text st)))
 
 
+;; not working so good
 (defn remove-strings [strings words]
   (let [pattern (->> strings
                      (map #(java.util.regex.Pattern/quote %)) 
@@ -138,13 +140,14 @@
     (map #(.replaceAll % pattern "") words)))
 
 
+
 (defn get-combinations [words]
   (->> words
        count
        inc
        (range 1)
        (mapcat #(math/combinations words %))
-       (map  #(->> % (interpose " ") (apply str)))))
+       (map #(->> % (interpose " ") (apply str)))))
 
 
 (defn get-top-word-frequencies [word]
@@ -179,7 +182,7 @@
                                [cn-assoc])
                         tsks)]
              (->> (map #(for [t (first %) f (second %)]
-                          (try3 (f t)))
+                          (f t))
                        tsks)
                   flatten
                   (remove nil?)
