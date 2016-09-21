@@ -12,8 +12,10 @@
 
 (def config {:retry-time 1000})
 
-;;(def google-url "https://www.google.com/search?num=100&safe=off&site=&source=hp&q=")
+
 (def google-url "https://www.google.com/search")
+(def ts-url "http://www.thesaurus.com/browse/")
+
 
 (defn try-n-times [f n]
   (if (zero? n)
@@ -49,20 +51,52 @@
 
 
 (defn http-get [url opts]
-  (let [opts (assoc opts :throw-entire-message? true)]
+  (let [opts (assoc opts :throw-entire-message? true :headers client-headers)]
     (try3 (client/get url opts))))
 
 
-(defn get-parsed-html
-  [url term]
-  (-> (http-get url {:headers client-headers
-                     :query-params {"num" "100"
-                                    "safe" "off"
-                                    "source" "hp"
-                                    "q" term}})
-      :body
+(comment (defn get-google-html
+           [url term]
+           (-> (http-get url {:headers client-headers
+                              :query-params {"num" "100"
+                                             "safe" "off"
+                                             "source" "hp"
+                                             "q" term}})
+               :body
+               parse-html)))
+
+
+(defn parse-html
+  [html]
+  (-> html
       java.io.StringReader.
       enlive/html-resource))
+
+
+(defn get-html
+  ([url]
+   (get-html url {}))
+  ([url opts]
+   (-> (http-get url opts)
+       :body)))
+
+
+(defn extract-text [dom selectors]
+  (for [st (enlive/select dom [selectors])]
+    (enlive/text st)))
+
+
+;;
+;; Thesaurus
+;;
+(defn ts-search [term]
+  (let [st [[:span (enlive/attr= :class "text")]
+            [:a (enlive/attr= :class "syn_of_syns")]]
+        dom (-> (str ts-url term)
+                get-html
+                parse-html)]
+    (mapcat #(extract-text dom %) st)))
+
 
 
 (defn cn-normalize [term]
@@ -150,14 +184,14 @@
        (map #(->> % (interpose " ") (apply str)))))
 
 
-(defn get-top-word-frequencies [word]
-  (->> word
-       (get-parsed-html google-url)
-       get-dom-text
-       (apply str)
-       (re-seq #"\w+")
-       (remove #(-> % clojure.string/lower-case english-articles))
-       frequencies))
+(comment (defn get-top-word-frequencies [word]
+           (->> word
+                (get-parsed-html google-url)
+                get-dom-text
+                (apply str)
+                (re-seq #"\w+")
+                (remove #(-> % clojure.string/lower-case english-articles))
+                frequencies)))
 
 
 (comment google (->> search-terms
@@ -170,8 +204,9 @@
                      (map first)
                      (into #{})))
 
-(defremote generate [search-terms how-many]
-  (let [cn (let [search-terms (map #(try3 (cn-normalize %)) search-terms)
+(defremote generate [search-terms]
+  (let [;; ConceptNet
+        cn (let [search-terms (map #(cn-normalize %) search-terms)
                  ;; single terms
                  tsks {search-terms
                        [cn-lookup cn-search cn-assoc]}
@@ -187,11 +222,19 @@
                   flatten
                   (remove nil?)
                   (map #(clojure.string/replace % "_" " "))
-                  distinct))]
-    { ;;:google google
-     :conceptnet cn}))
+                  distinct))
+        ;; Thesaurus
+        ts (mapcat #(ts-search %) search-terms)]
+    {;:google google
+     :conceptnet cn
+     :thesaurus ts}))
 
 
 ;;TODO
-;; - search API
+;; - wiktionary
 ;; - again lib
+;; - handle exceptions and clj-http 404
+
+
+;;[:span (enlive/attr= :class "st")]
+;;(def google-url "https://www.google.com/search?num=100&safe=off&site=&source=hp&q=")

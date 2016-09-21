@@ -17,7 +17,7 @@
 
 ;; app state
 (def data (r/atom {:results {}
-                   :results-visible true}))
+                   :results-visible false}))
 
 
 (def config {:result-size 30})
@@ -28,7 +28,7 @@
 (defn handle-words [words]
   (let [ws (re-seq #"\w+" words)]
     (remote-callback :generate
-                     [ws (:result-size config)]
+                     [ws]
                      (fn [res]
                        (->> res
                             (reduce (fn [m [k v]]
@@ -37,7 +37,9 @@
                                              ;;[[word visible] ...]
                                              (vec (map #(identity [% true]) v)))) 
                                     {})
-                            (swap! data assoc-in [:results]))))))
+                            (swap! data assoc-in [:results]))
+                       
+                       (swap! data assoc :results-visible true)))))
 
 
 
@@ -63,15 +65,9 @@
                           :on-click #(handle-words @text)}]]]])))
 
 
-
-(comment (for [word p]
-           ^{:key word} [:li.word {:on-click #(swap! data disj word)}
-                         word]))
-
-
 (defn word-list [data]
   [row
-   (let [size (int (/ (count @data) 3))] ;;FIXME: rounding issues
+   (let [size (js/Math.ceil (/ (count @data) 3))]
      (map-indexed
       (fn [idx1 xs]
         [col {:md 4}
@@ -92,7 +88,7 @@
   [grid
    [row
     [col {:md 8}
-     [page-header "Ramen Generator"]]]
+     [page-header ""]]]
    [row
     [col {:md 8}
      [input-form state]]]
@@ -102,10 +98,10 @@
      [col {:md 12}
       [row
        [col {:md 8}
-        [panel {:header "Google"
+        [panel {:header "Thesaurus"
                 :collapsible true
                 :default-expanded true}
-         [word-list (r/cursor state [:results :google])]]]]
+         [word-list (r/cursor state [:results :thesaurus])]]]]
       [row
        [col {:md 8}
         [panel {:header "ConceptNet"
@@ -131,6 +127,6 @@
 
 ;; TODO
 ;; ----
-;; - deleted words leave empty space
+;;
 ;; - CSS columns instead of manually dividing the list
 ;;
