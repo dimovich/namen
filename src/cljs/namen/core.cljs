@@ -94,7 +94,7 @@
                      [col {:md md}
                       (map-indexed
                        (fn [idx [word visible]]
-                         ^{:key word}
+                         ^{:key (str (+ idx count) word)}
                          [:div
                           [(keyword (str "span.word" (when-not visible ".myhidden")))
                            {:on-click #(swap! data update-in
@@ -103,6 +103,17 @@
                            word]])
                        (take batch xs))]))))))
 
+
+(defn action-menu [state]
+  [:div
+   [:p [:span {:class "action"
+               :on-click #(swap! state update-in [:results] prune-words)}
+        "delete words"]]
+   [:p [:span {:class "action"
+               :on-click (fn [] (do
+                                  (swap! state update-in [:results] #(identity {}))
+                                  (swap! state assoc :results-visible false)))}
+        "reset"]]])
 
 
 
@@ -118,6 +129,12 @@
        [row
         [col {:md 8}
          [input-form state]]]
+       [row
+        [col {:md 8}
+         [:center
+          [:label.switch
+           [:input {:type "checkbox"}]
+           [:div.slider.round]]]]]
    
        [fade {:in (:results-visible @state)}
         [row
@@ -134,11 +151,9 @@
                     :collapsible true
                     :default-expanded true}
              [word-list conceptnet]]]]]
-         [col {:md 3 :md-offset 1 :class "sidebar-outer"}
+         [col {:md 3 :sm-offset 1 :class "sidebar-outer"}
           [col {:md 3 :class "fixed"}
-           [:span {:class "action"
-                   :on-click #(swap! results prune-words)}
-            "clear"]]]
+           [action-menu state]]]
          ]]])))
 
 
