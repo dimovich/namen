@@ -1,6 +1,7 @@
 (ns namen.bootstrap
   (:require [reagent.core :as r]
-            [cljsjs.react-bootstrap]))
+            [cljsjs.react-bootstrap]
+            [cljsjs.react-sticky]))
 
 
 (defn bootstrap [& args]
@@ -21,6 +22,9 @@
 (def input-group (bootstrap "InputGroup"))
 (def input-group-button (bootstrap "InputGroup" "Button"))
 (def fade (bootstrap "Fade"))
+(def table (bootstrap "Table"))
+(def stickycontainer (r/adapt-react-class (aget js/ReactSticky "StickyContainer")))
+(def sticky (r/adapt-react-class (aget js/ReactSticky "Sticky")))
 
 
 (defn loading-button [{:keys [state state-key on-click etext dtext opts]}]

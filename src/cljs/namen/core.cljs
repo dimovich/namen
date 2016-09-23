@@ -10,7 +10,8 @@
                                      control-label grid row col
                                      page-header panel input-group
                                      input-group-button fade
-                                     loading-button]])
+                                     loading-button;; sticky stickycontainer
+                                     ]])
   
   (:require-macros [shoreleave.remotes.macros :as macros]))
 
@@ -22,6 +23,25 @@
 
 (def config {:result-size 30})
 
+
+;;not optimal
+(defn seq-to-results [xs]
+  (reduce
+   (fn [m [k v]]
+     (assoc m
+            k
+            ;;[[word visible] ...]
+            (vec (map #(identity [% true]) v)))) 
+   {} xs))
+
+(defn prune-words [xs]
+  (reduce
+   (fn [m [k v]]
+     (assoc m
+            k
+            (vec (remove (fn [[_ visible]]  (not visible)) v)))) 
+   {} xs))
+
 ;;
 ;; get results from server
 ;;
@@ -31,12 +51,7 @@
                      [ws]
                      (fn [res]
                        (->> res
-                            (reduce (fn [m [k v]]
-                                      (assoc m
-                                             k
-                                             ;;[[word visible] ...]
-                                             (vec (map #(identity [% true]) v)))) 
-                                    {})
+                            seq-to-results
                             (swap! data assoc-in [:results]))
                        
                        (swap! data assoc :results-visible true)))))
@@ -66,48 +81,65 @@
 
 
 (defn word-list [data]
-  [row
-   (let [size (js/Math.ceil (/ (count @data) 3))]
-     (map-indexed
-      (fn [idx1 xs]
-        [col {:md 4}
-         (map-indexed
-          (fn [idx2 [word visible]]
-            ^{:key word} [(keyword (str "li.word" (when-not visible ".myhidden")))
-                          {:on-click #(swap! data update-in
-                                             [(+ idx2 (* size idx1)) 1]
-                                             not)}
-                          word])
-          xs)])
-      (partition-all size @data)))])
+  (let [cc 3
+        batch (js/Math.ceil (/ (count @data) cc))
+        md (/ 12 cc)]
+    (loop [count 0
+           xs @data
+           content [row]]
+      (if (empty? xs)
+        content
+        (recur (+ count batch) (drop batch xs)
+               (conj content
+                     [col {:md md}
+                      (map-indexed
+                       (fn [idx [word visible]]
+                         ^{:key word}
+                         [:div
+                          [(keyword (str "span.word" (when-not visible ".myhidden")))
+                           {:on-click #(swap! data update-in
+                                              [(+ idx count) 1]
+                                              not)}
+                           word]])
+                       (take batch xs))]))))))
 
 
 
 
 (defn main-form [state]
-  [grid
-   [row
-    [col {:md 8}
-     [page-header ""]]]
-   [row
-    [col {:md 8}
-     [input-form state]]]
+  (let [results (r/cursor state [:results])
+        thesaurus (r/cursor state [:results :thesaurus])
+        conceptnet (r/cursor state [:results :conceptnet])]
+    (fn []
+      [grid
+       [row
+        [col {:md 8}
+         [page-header ""]]]
+       [row
+        [col {:md 8}
+         [input-form state]]]
    
-   [fade {:in (:results-visible @state)}
-    [row
-     [col {:md 12}
-      [row
-       [col {:md 8}
-        [panel {:header "Thesaurus"
-                :collapsible true
-                :default-expanded true}
-         [word-list (r/cursor state [:results :thesaurus])]]]]
-      [row
-       [col {:md 8}
-        [panel {:header "ConceptNet"
-                :collapsible true
-                :default-expanded true}
-         [word-list (r/cursor state [:results :conceptnet])]]]]]]]])
+       [fade {:in (:results-visible @state)}
+        [row
+         [col {:md 8}
+          [row
+           [col {:md 12}
+            [panel {:header "Thesaurus"
+                    :collapsible true
+                    :default-expanded true}
+             [word-list thesaurus]]]]
+          [row
+           [col {:md 12}
+            [panel {:header "ConceptNet"
+                    :collapsible true
+                    :default-expanded true}
+             [word-list conceptnet]]]]]
+         [col {:md 3 :md-offset 1 :class "sidebar-outer"}
+          [col {:md 3 :class "fixed"}
+           [:span {:class "action"
+                   :on-click #(swap! results prune-words)}
+            "clear"]]]
+         ]]])))
 
 
 
@@ -129,4 +161,5 @@
 ;; ----
 ;;
 ;; - CSS columns instead of manually dividing the list
+;; - recover from blocked remote procedure
 ;;

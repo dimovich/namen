@@ -3,10 +3,6 @@
 }
 
 
-.word {
-    column-span: all;
-}
-
 .word:hover {
     text-decoration: line-through;
     color: rgba(0, 0, 0, 0.5);
@@ -15,4 +11,17 @@
 
 .myhidden {
     opacity: 0.18;
+}
+
+.fixed {
+    position: fixed;
+}
+
+.sidebar-outer {
+    margin-top: 150px;
+    position: relative;
+}
+
+.action:hover {
+    cursor: pointer;
 }
