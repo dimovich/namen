@@ -23,7 +23,7 @@
 }
 
 .action {
-    opacity: 0.8;
+    opacity: 0.7;
     font-size: 125%;
 }
 
@@ -37,8 +37,10 @@
 .switch {
   position: relative;
   display: inline-block;
-  width: 40px;
+  width: 41px;
   height: 24px;
+  top: 11px;
+  margin-top: -15px;
 }
 
 /* Hide default HTML checkbox */

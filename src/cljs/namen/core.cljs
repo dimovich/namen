@@ -17,11 +17,12 @@
 
 
 ;; app state
-(def data (r/atom {:results {}
-                   :results-visible false}))
+(def app (r/atom {:results {}
+                  :results-visible false
+                  :less true}))
 
 
-(def config {:result-size 30})
+(def config {:lessize 30})
 
 
 ;;not optimal
@@ -31,7 +32,9 @@
      (assoc m
             k
             ;;[[word visible] ...]
-            (vec (map #(identity [% true]) v)))) 
+            (vec (map #(identity [% true]) (if (:less @app)
+                                             (take (:lessize config) v)
+                                             v))))) 
    {} xs))
 
 (defn prune-words [xs]
@@ -52,9 +55,9 @@
                      (fn [res]
                        (->> res
                             seq-to-results
-                            (swap! data assoc-in [:results]))
+                            (swap! app assoc-in [:results]))
                        
-                       (swap! data assoc :results-visible true)))))
+                       (swap! app assoc :results-visible true)))))
 
 
 
@@ -118,8 +121,7 @@
 
 
 (defn main-form [state]
-  (let [results (r/cursor state [:results])
-        thesaurus (r/cursor state [:results :thesaurus])
+  (let [thesaurus (r/cursor state [:results :thesaurus])
         conceptnet (r/cursor state [:results :conceptnet])]
     (fn []
       [grid
@@ -132,9 +134,14 @@
        [row
         [col {:md 8}
          [:center
-          [:label.switch
-           [:input {:type "checkbox"}]
-           [:div.slider.round]]]]]
+          [:span "less "]
+          [:label.switch 
+           [:input {:type "checkbox":id "lessmore"
+                    :on-click #(swap! state update :less not)}]
+           [:span.slider.round]]
+          [:span "  more"]]]]
+
+       [:p] [:p]
    
        [fade {:in (:results-visible @state)}
         [row
@@ -144,13 +151,13 @@
             [panel {:header "Thesaurus"
                     :collapsible true
                     :default-expanded true}
-             [word-list thesaurus]]]]
+             [word-list thesaurus {:less (:less @state)}]]]]
           [row
            [col {:md 12}
             [panel {:header "ConceptNet"
                     :collapsible true
                     :default-expanded true}
-             [word-list conceptnet]]]]]
+             [word-list conceptnet {:less (:less @state)}]]]]]
          [col {:md 3 :sm-offset 1 :class "sidebar-outer"}
           [col {:md 3 :class "fixed"}
            [action-menu state]]]
@@ -168,7 +175,7 @@
   (enable-console-print!)
   (when (and js/document
              (aget js/document "getElementById"))
-    (render [box data] (by-id "app"))))
+    (render [box app] (by-id "app"))))
 
 
 
