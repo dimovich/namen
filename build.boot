@@ -18,7 +18,6 @@
                  [org.clojars.magomimmo/shoreleave-remote-ring "0.3.1"]
                  [org.clojars.magomimmo/shoreleave-remote "0.3.1"]
                  [javax.servlet/servlet-api "3.0-alpha-1"]
-                                        ;                 [org.clojars.dimovich/valip "0.4.0-SNAPSHOT"]
                  [enlive "1.1.6"]
                  [adzerk/boot-test "1.1.0"]
                  [crisptrutski/boot-cljs-test "0.2.1"]
@@ -27,8 +26,7 @@
                  [clj-http "2.2.0"]
                  [org.clojure/math.combinatorics "0.1.3"]
                  [cljsjs/react-bootstrap "0.30.2-0"]
-                 [cheshire "5.6.3"]
-                 [cljsjs/react-sticky "5.0.4-0"]])
+                 [cheshire "5.6.3"]])
 
 (require '[adzerk.boot-cljs :refer [cljs]]
          '[pandeiro.boot-http :refer [serve]]

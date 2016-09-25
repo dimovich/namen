@@ -10,8 +10,7 @@
                                      control-label grid row col
                                      page-header panel input-group
                                      input-group-button fade
-                                     loading-button;; sticky stickycontainer
-                                     ]])
+                                     loading-button]])
   
   (:require-macros [shoreleave.remotes.macros :as macros]))
 
@@ -32,9 +31,10 @@
      (assoc m
             k
             ;;[[word visible] ...]
-            (vec (map #(identity [% true]) (if (:less @app)
-                                             (take (:lessize config) v)
-                                             v))))) 
+            (vec (map #(identity [% true])
+                      (if (:less @app)
+                        (take (:lessize config) v)
+                        v))))) 
    {} xs))
 
 (defn prune-words [xs]
@@ -70,7 +70,7 @@
                        :placeholder "insert keywords"
                        :value @text
                        :on-change #(reset! text (-> % .-target .-value))
-                       :on-submit #(prevent-default %) ;; do we need this?
+;;                       :on-submit #(prevent-default %) ;; do we need this?
                        :on-key-press (fn [e]
                                        (when (= 13 (.-charCode e))
                                          (.click (by-id "generate"))))}]
@@ -122,7 +122,8 @@
 
 (defn main-form [state]
   (let [thesaurus (r/cursor state [:results :thesaurus])
-        conceptnet (r/cursor state [:results :conceptnet])]
+        conceptnet (r/cursor state [:results :conceptnet])
+        google (r/cursor state [:results :google])]
     (fn []
       [grid
        [row
@@ -148,16 +149,25 @@
          [col {:md 8}
           [row
            [col {:md 12}
-            [panel {:header "Thesaurus"
-                    :collapsible true
-                    :default-expanded true}
-             [word-list thesaurus {:less (:less @state)}]]]]
-          [row
-           [col {:md 12}
             [panel {:header "ConceptNet"
                     :collapsible true
                     :default-expanded true}
-             [word-list conceptnet {:less (:less @state)}]]]]]
+             [word-list conceptnet]]]]
+
+          [row
+           [col {:md 12}
+            [panel {:header "Google"
+                    :collapsible true
+                    :default-expanded true}
+             [word-list google]]]]
+
+          [row
+           [col {:md 12}
+            [panel {:header "Thesaurus"
+                    :collapsible true
+                    :default-expanded true}
+             [word-list thesaurus]]]]]
+         
          [col {:md 3 :sm-offset 1 :class "sidebar-outer"}
           [col {:md 3 :class "fixed"}
            [action-menu state]]]

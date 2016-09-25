@@ -10,7 +10,8 @@
             [cheshire.core :as json]))
 
 
-(def config {:retry-time 1000})
+(def config {:retry-time 1000
+             :google-size 50})
 
 
 (def google-url "https://www.google.com/search")
@@ -34,7 +35,7 @@
 
 (def client-headers {"User-Agent" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0"})
 
-(def english-articles #{"his" "ago" "of" "up" "off" "theirs" "yours" "mine" "by" "away" "about" "they" "near to" "without" "for" "my" "short" "circa" "a" "on" "notwithstanding" "from" "with" "through" "aside" "your" "to" "hence" "apart" "as" "at" "her" "in" "adjacent to" "on account of" "us" "them" "me" "you" "do" "the" "are" "our" "their" "it" "I" "and" "over" "be" "there" "here" "is" "s" "that" "he" "has" "have" "an" "t" "was"})
+(def english-articles #{"his" "ago" "of" "up" "off" "theirs" "yours" "mine" "by" "away" "about" "they" "near to" "without" "for" "my" "short" "circa" "a" "on" "notwithstanding" "from" "with" "through" "aside" "your" "to" "hence" "apart" "as" "at" "her" "in" "adjacent to" "on account of" "us" "them" "me" "you" "do" "the" "are" "our" "their" "it" "I" "and" "over" "be" "there" "here" "is" "s" "that" "he" "has" "have" "an" "t" "was" "all" "its" "two" "three" "into" "than" "more" "if" "also" "or" "when" "then" "each" "across" "out" "where" "can" "one" "this" "not" "these" "non" "most" "will"})
 
 
 (defroutes handler
@@ -54,16 +55,6 @@
   (let [opts (assoc opts :throw-entire-message? true :headers client-headers)]
     (try3 (client/get url opts))))
 
-
-(comment (defn get-google-html
-           [url term]
-           (-> (http-get url {:headers client-headers
-                              :query-params {"num" "100"
-                                             "safe" "off"
-                                             "source" "hp"
-                                             "q" term}})
-               :body
-               parse-html)))
 
 
 (defn parse-html
@@ -159,22 +150,6 @@
          (res "similar"))))
 
 
-;; for google
-(defn get-dom-text [dom]
-  (for [st (enlive/select dom [[:span (enlive/attr= :class "st")]])]
-    (enlive/text st)))
-
-
-;; not working so good
-(defn remove-strings [strings words]
-  (let [pattern (->> strings
-                     (map #(java.util.regex.Pattern/quote %)) 
-                     (interpose \|)
-                     (apply str))]
-    (map #(.replaceAll % pattern "") words)))
-
-
-
 (defn get-combinations [words]
   (->> words
        count
@@ -184,28 +159,23 @@
        (map #(->> % (interpose " ") (apply str)))))
 
 
-(comment (defn get-top-word-frequencies [word]
-           (->> word
-                (get-parsed-html google-url)
-                get-dom-text
-                (apply str)
-                (re-seq #"\w+")
-                (remove #(-> % clojure.string/lower-case english-articles))
-                frequencies)))
+(defn google-search [term]
+  (->>
+   (-> (get-html google-url {:query-params {"num" "100"
+                                            "safe" "off"
+                                            "source" "hp"
+                                            "q" term}})
+       (parse-html)
+       (extract-text [[:span (enlive/attr= :class "st")]]))
+   (apply str)
+   clojure.string/lower-case
+   (re-seq #"\b[^\d\W]{3,}\b")
+   (remove english-articles)
+   frequencies))
 
-
-(comment google (->> search-terms
-                     get-combinations
-                     (map #(get-top-word-frequencies %))
-                     (reduce #(merge-with + %1 %2))
-                     (sort-by val)
-                     reverse
-                     (take how-many)
-                     (map first)
-                     (into #{})))
 
 (defremote generate [search-terms]
-  (let [;; ConceptNet
+  (let [ ;; ConceptNet
         cn (let [search-terms (map #(cn-normalize %) search-terms)
                  ;; single terms
                  tsks {search-terms
@@ -224,8 +194,19 @@
                   (map #(clojure.string/replace % "_" " "))
                   distinct))
         ;; Thesaurus
-        ts (mapcat #(ts-search %) search-terms)]
-    {;:google google
+        ts (mapcat #(ts-search %) search-terms)
+
+        ;; Google
+        google (->> search-terms
+                    get-combinations
+                    (map #(google-search %))
+                    (reduce #(merge-with + %1 %2))
+                    (sort-by val)
+                    reverse
+                    (take (:google-size config))
+                    (map first)
+                    distinct)]
+    {:google google
      :conceptnet cn
      :thesaurus ts}))
 
@@ -234,7 +215,3 @@
 ;; - wiktionary
 ;; - again lib
 ;; - handle exceptions and clj-http 404
-
-
-;;[:span (enlive/attr= :class "st")]
-;;(def google-url "https://www.google.com/search?num=100&safe=off&site=&source=hp&q=")
