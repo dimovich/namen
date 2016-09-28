@@ -1,18 +1,12 @@
 (ns namen.core
   (:require [reagent.core :as r :refer [render]]
-            [domina.core :refer [value by-id destroy!]]
-            [domina.events :refer [listen! prevent-default]]
-            [cljs.reader :refer [read-string]]
-            [clojure.string :as s :refer [blank?]]
-            [shoreleave.remotes.http-rpc :refer [remote-callback]]
+            [ajax.core :as ajax :refer [GET]]
             [namen.bootstrap :refer [button navbar navbar-form
                                      form-control form-group form
                                      control-label grid row col
                                      page-header panel input-group
                                      input-group-button fade
-                                     loading-button]])
-  
-  (:require-macros [shoreleave.remotes.macros :as macros]))
+                                     loading-button]]))
 
 
 ;; app state
@@ -23,13 +17,14 @@
 
 (def config {:lessize 30})
 
+(def by-id (aget js/document "getElementById"))
 
 ;;not optimal
 (defn seq-to-results [xs]
   (reduce
    (fn [m [k v]]
      (assoc m
-            k
+            (keyword k)
             ;;[[word visible] ...]
             (vec (map #(identity [% true])
                       (if (:less @app)
@@ -49,15 +44,16 @@
 ;; get results from server
 ;;
 (defn handle-words [words]
-  (let [ws (re-seq #"\w+" words)]
-    (remote-callback :generate
-                     [ws]
-                     (fn [res]
-                       (->> res
-                            seq-to-results
-                            (swap! app assoc-in [:results]))
-                       
-                       (swap! app assoc :results-visible true)))))
+  (let [words (re-seq #"\w+" words)]
+    (GET "/generate" {:handler (fn [res]
+                                 (->> res
+                                      seq-to-results
+                                      (swap! app assoc-in [:results]))
+                                 (swap! app assoc :results-visible true))
+                      
+                      :error-handler #(.log js/console "error getting results...")
+                      :params {:words words}
+                      :response-format (ajax/json-response-format)})))
 
 
 
@@ -70,7 +66,6 @@
                        :placeholder "insert keywords"
                        :value @text
                        :on-change #(reset! text (-> % .-target .-value))
-;;                       :on-submit #(prevent-default %) ;; do we need this?
                        :on-key-press (fn [e]
                                        (when (= 13 (.-charCode e))
                                          (.click (by-id "generate"))))}]
@@ -182,9 +177,9 @@
 
 
 (defn ^:export init []
-  (enable-console-print!)
+;;  (enable-console-print!)
   (when (and js/document
-             (aget js/document "getElementById"))
+             by-id)
     (render [box app] (by-id "app"))))
 
 

@@ -1,44 +1,35 @@
 (set-env!
- :source-paths #{"src/clj" "src/cljs" "src/cljc"}
+ :source-paths #{"src/clj" "src/cljs"}
  :resource-paths #{"html"}
 
- :dependencies '[
-                 [org.clojure/clojure "1.7.0"]         ;; add CLJ
-                 [org.clojure/clojurescript "1.7.228"] ;; add CLJS
-                 [adzerk/boot-cljs "1.7.170-3"]
-                 [pandeiro/boot-http "0.7.0"]
-                 [adzerk/boot-reload "0.4.2"]
-                 [adzerk/boot-cljs-repl "0.3.0"]   ;; add bREPL
-                 [com.cemerick/piggieback "0.2.1"] ;; needed by bREPL 
-                 [weasel "0.7.0"]                  ;; needed by bREPL
-                 [org.clojure/tools.nrepl "0.2.12"] ;; needed by bREPL
-                 [org.clojars.magomimmo/domina "2.0.0-SNAPSHOT"]
-                 [hiccups "0.3.0"]
-                 [compojure "1.4.0"] ;; for routing
-                 [org.clojars.magomimmo/shoreleave-remote-ring "0.3.1"]
-                 [org.clojars.magomimmo/shoreleave-remote "0.3.1"]
+ :dependencies '[[org.clojure/clojure "1.8.0"]
+                 [org.clojure/clojurescript "1.9.229"]
+                 [adzerk/boot-cljs "1.7.228-1"]
+                 [pandeiro/boot-http "0.7.3"]
+                 [adzerk/boot-reload "0.4.12"]
+                 [adzerk/boot-cljs-repl "0.3.3"]
+                 [com.cemerick/piggieback "0.2.1" :scope "test"]
+                 [weasel "0.7.0" :scope "test"]
+                 [org.clojure/tools.nrepl "0.2.12" :scope "test"]
+                 [compojure "1.5.1"]
                  [javax.servlet/servlet-api "3.0-alpha-1"]
                  [enlive "1.1.6"]
-                 [adzerk/boot-test "1.1.0"]
-                 [crisptrutski/boot-cljs-test "0.2.1"]
-                 [reagent "0.6.0-rc"]
-                 [cljsjs/marked "0.3.5-0"]
+                 [reagent "0.6.0"]
                  [clj-http "2.2.0"]
                  [org.clojure/math.combinatorics "0.1.3"]
                  [cljsjs/react-bootstrap "0.30.2-0"]
-                 [cheshire "5.6.3"]])
+                 [cheshire "5.6.3"]
+                 [cljs-ajax "0.5.8"]])
 
 (require '[adzerk.boot-cljs :refer [cljs]]
          '[pandeiro.boot-http :refer [serve]]
          '[adzerk.boot-reload :refer [reload]]
          '[adzerk.boot-cljs-repl :refer [cljs-repl start-repl]]
-         '[adzerk.boot-test :refer [test]]
-         '[crisptrutski.boot-cljs-test :refer [test-cljs]]
          'boot.repl)
 
 
 (swap! boot.repl/*default-dependencies*
-       concat '[[cider/cider-nrepl "0.13.0"]
+       concat '[[cider/cider-nrepl "0.14.0-SNAPSHOT"]
                 [refactor-nrepl "2.0.0-SNAPSHOT"]])
 
 (swap! boot.repl/*default-middleware*
@@ -75,9 +66,9 @@
      (serve :handler 'namen.core/app
             :resource-root "target"
             :reload true
-            :httpkit httpkit
+            :httpkit true
             :port port)
-     (add-source-paths :dirs dirs)
+     #_(add-source-paths :dirs dirs)
      (watch :verbose verbose)
      (reload)
      (cljs-repl)
@@ -86,24 +77,3 @@
 
      (target :dir #{"target"}))))
 
-(deftask dev 
-  "Launch immediate feedback dev environment"
-  []
-  (comp
-   (serve :handler 'namen.core/app ;; ring hanlder
-          :resource-root "target"  ;; root classpath
-          :reload true)            ;; reload ns
-   (watch)
-   (reload)
-   (cljs-repl) ;; before cljs
-   (cljs)
-   (target :dir #{"target"})))
-
-
-
-(comment (test-cljs :out-file output-to 
-                    :js-env testbed 
-                    :namespaces namespaces
-                    :update-fs? true
-                    :optimizations optimizations)
-         (test :namespaces namespaces))

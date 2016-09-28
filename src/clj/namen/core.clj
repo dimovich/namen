@@ -4,7 +4,6 @@
             [compojure.handler :refer [site]]
             [clj-http.client :as client]
             [net.cgrand.enlive-html :as enlive]
-            [shoreleave.middleware.rpc :refer [wrap-rpc defremote]]
             [clojure.math.combinatorics :as math]
             [namen.templates.index :refer [index]]
             [cheshire.core :as json]))
@@ -38,17 +37,7 @@
 (def english-articles #{"his" "ago" "of" "up" "off" "theirs" "yours" "mine" "by" "away" "about" "they" "near to" "without" "for" "my" "short" "circa" "a" "on" "notwithstanding" "from" "with" "through" "aside" "your" "to" "hence" "apart" "as" "at" "her" "in" "adjacent to" "on account of" "us" "them" "me" "you" "do" "the" "are" "our" "their" "it" "I" "and" "over" "be" "there" "here" "is" "s" "that" "he" "has" "have" "an" "t" "was" "all" "its" "two" "three" "into" "than" "more" "if" "also" "or" "when" "then" "each" "across" "out" "where" "can" "one" "this" "not" "these" "non" "most" "will"})
 
 
-(defroutes handler
-  (GET "/" [] (index))                  ;; for testing only
-  (files "/" {:root "target"})          ;; to serve static resources
-  (resources "/" {:root "target"})      ;; to serve anything else
-  (not-found "Page Not Found"))         ;; page not found
 
-
-(def app
-  (-> handler
-      (wrap-rpc)
-      (site)))
 
 
 (defn http-get [url opts]
@@ -174,7 +163,8 @@
    frequencies))
 
 
-(defremote generate [search-terms]
+(defn generate [search-terms]
+  (println "generating: " search-terms)
   (let [ ;; ConceptNet
         cn (let [search-terms (map #(cn-normalize %) search-terms)
                  ;; single terms
@@ -211,7 +201,25 @@
      :thesaurus ts}))
 
 
+
+(defroutes handler
+  (GET "/" [] (index)) ;; for testing only
+  (GET "/generate" xs (json/generate-string
+                       (generate (-> xs :params :words vals))))
+  (files "/" {:root "target"})     ;; to serve static resources
+  (resources "/" {:root "target"}) ;; to serve anything else
+  (not-found "Page Not Found"))    ;; page not found
+
+
+(def app
+  (-> handler
+      (site)))
+
+
+
 ;;TODO
 ;; - wiktionary
 ;; - again lib
 ;; - handle exceptions and clj-http 404
+
+
