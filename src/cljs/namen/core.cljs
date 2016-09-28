@@ -17,7 +17,7 @@
 
 (def config {:lessize 30})
 
-(def by-id (aget js/document "getElementById"))
+;;(def by-id (aget js/document "getElementById"))
 
 ;;not optimal
 (defn seq-to-results [xs]
@@ -68,7 +68,7 @@
                        :on-change #(reset! text (-> % .-target .-value))
                        :on-key-press (fn [e]
                                        (when (= 13 (.-charCode e))
-                                         (.click (by-id "generate"))))}]
+                                         (.click (.getElementById js/document "generate"))))}]
         [input-group-button
          [loading-button {:etext "Generate"
                           :dtext "Generating..."
@@ -177,10 +177,9 @@
 
 
 (defn ^:export init []
-;;  (enable-console-print!)
-  (when (and js/document
-             by-id)
-    (render [box app] (by-id "app"))))
+  ;;  (enable-console-print!)
+  (when js/document
+    (render [box app] (.getElementById js/document "app"))))
 
 
 
