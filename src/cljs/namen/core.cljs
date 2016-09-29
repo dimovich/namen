@@ -12,7 +12,8 @@
 ;; app state
 (def app (r/atom {:results {}
                   :results-visible false
-                  :less true}))
+                  :less true
+                  :white true}))
 
 
 (def config {:lessize 30})
@@ -32,13 +33,15 @@
                         v))))) 
    {} xs))
 
-(defn prune-words [xs]
-  (reduce
-   (fn [m [k v]]
-     (assoc m
-            k
-            (vec (remove (fn [[_ visible]]  (not visible)) v)))) 
-   {} xs))
+(defn prune-words
+  ([xs] (prune-words xs true))
+  ([xs invert]
+   (reduce
+    (fn [m [k v]]
+      (assoc m
+             k
+             (vec (remove (fn [[_ visible]]  (if invert (not visible) visible)) v)))) 
+    {} xs)))
 
 ;;
 ;; get results from server
@@ -78,7 +81,7 @@
                           :on-click #(handle-words @text)}]]]])))
 
 
-(defn word-list [data]
+(defn word-list [data white]
   (let [cc 3
         batch (js/Math.ceil (/ (count @data) cc))
         md (/ 12 cc)]
@@ -94,7 +97,7 @@
                        (fn [idx [word visible]]
                          ^{:key (str (+ idx count) word)}
                          [:div
-                          [(keyword (str "span.word" (when-not visible ".myhidden")))
+                          [(keyword (str "span.word" (when-not visible (if white ".mywhite" ".myblack"))))
                            {:on-click #(swap! data update-in
                                               [(+ idx count) 1]
                                               not)}
@@ -105,8 +108,8 @@
 (defn action-menu [state]
   [:div
    [:p [:span {:class "action"
-               :on-click #(swap! state update-in [:results] prune-words)}
-        "delete words"]]
+               :on-click #(swap! state update-in [:results] prune-words (:white @state))}
+        (str (if (:white @state) "delete" "mark") " words")]]
    [:p [:span {:class "action"
                :on-click (fn [] (do
                                   (swap! state update-in [:results] #(identity {}))
@@ -118,7 +121,8 @@
 (defn main-form [state]
   (let [thesaurus (r/cursor state [:results :thesaurus])
         conceptnet (r/cursor state [:results :conceptnet])
-        google (r/cursor state [:results :google])]
+        ;; google (r/cursor state [:results :google])
+        white (r/cursor state [:white])]
     (fn []
       [grid
        [row
@@ -128,14 +132,24 @@
         [col {:md 8}
          [input-form state]]]
        [row
-        [col {:md 8}
+        [col {:md 3;; :sm-offset 1
+              }
          [:center
           [:span "less "]
           [:label.switch 
            [:input {:type "checkbox":id "lessmore"
                     :on-click #(swap! state update :less not)}]
            [:span.slider.round]]
-          [:span "  more"]]]]
+          [:span "  more"]]]
+
+        [col {:md 3}
+         [:center
+          [:span "white"]
+          [:label.switch 
+           [:input {:type "checkbox" :id "whiteblack"
+                    :on-click #(swap! state update :white not)}]
+           [:span.slider.round]]
+          [:span "   black"]]]]
 
        [:p] [:p]
    
@@ -147,21 +161,21 @@
             [panel {:header "ConceptNet"
                     :collapsible true
                     :default-expanded true}
-             [word-list conceptnet]]]]
+             [word-list conceptnet white]]]]
 
-          [row
-           [col {:md 12}
-            [panel {:header "Google"
-                    :collapsible true
-                    :default-expanded true}
-             [word-list google]]]]
+          #_[row
+             [col {:md 12}
+              [panel {:header "Google"
+                      :collapsible true
+                      :default-expanded true}
+               [word-list google]]]]
 
           [row
            [col {:md 12}
             [panel {:header "Thesaurus"
                     :collapsible true
                     :default-expanded true}
-             [word-list thesaurus]]]]]
+             [word-list thesaurus white]]]]]
          
          [col {:md 3 :sm-offset 1 :class "sidebar-outer"}
           [col {:md 3 :class "fixed"}

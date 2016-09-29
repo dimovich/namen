@@ -10,7 +10,7 @@
             [slingshot.slingshot :refer [try+ throw+]]))
 
 
-(def config {:retry-time 1000
+(def config {:retry-time 500
              :google-size 50})
 
 
@@ -25,15 +25,17 @@
     ""
     (try+
      (f)
-     (catch [:status 403] _;;{:keys [request-time headers body]}
+     (catch [:status 403] {:keys [request-time headers body]}
        ;;(println "403" request-time headers)
-       "")
-     (catch [:status 404] _;;{:keys [request-time headers body]}
+       {:body ""}
+       )
+     (catch [:status 404] {:keys [request-time headers body]}
        ;;(println "NOT Found 404" request-time headers body)
-       "")
+       {:body ""}
+       )
      (catch Object _
        (do
-         ;;(println (:throwable &throw-context) "unexpected error")
+        ;; (println (:throwable &throw-context) "unexpected error")
          (println "unexpected error")
          (Thread/sleep (:retry-time config))
          (try-n-times f (dec n)))))))
@@ -214,16 +216,16 @@
         ts (mapcat #(ts-search %) search-terms)
 
         ;; Google
-        google (->> search-terms
-                    get-combinations
-                    (map #(google-search %))
-                    (reduce #(merge-with + %1 %2))
-                    (sort-by val)
-                    reverse
-                    (take (:google-size config))
-                    (map first)
-                    ;;distinct
-                    )]
+        google '() #_(->> search-terms
+                          get-combinations
+                          (map #(google-search %))
+                          (reduce #(merge-with + %1 %2))
+                          (sort-by val)
+                          reverse
+                          (take (:google-size config))
+                          (map first)
+                          ;;distinct
+                          )]
     {:google google
      :conceptnet cn
      :thesaurus ts}))
