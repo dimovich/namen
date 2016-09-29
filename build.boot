@@ -19,7 +19,8 @@
                  [org.clojure/math.combinatorics "0.1.3"]
                  [cljsjs/react-bootstrap "0.30.2-0"]
                  [cheshire "5.6.3"]
-                 [cljs-ajax "0.5.8"]])
+                 [cljs-ajax "0.5.8"]
+                 [slingshot "0.12.2"]])
 
 (require '[adzerk.boot-cljs :refer [cljs]]
          '[pandeiro.boot-http :refer [serve]]
@@ -77,3 +78,11 @@
 
      (target :dir #{"target"}))))
 
+
+
+(deftask prod
+  []
+  (serve :handler 'namen.core/app
+         :resource-root "target"
+         :httpkit true)
+  (watch :verbose true))

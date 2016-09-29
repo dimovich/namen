@@ -6,7 +6,8 @@
             [net.cgrand.enlive-html :as enlive]
             [clojure.math.combinatorics :as math]
             [namen.templates.index :refer [index]]
-            [cheshire.core :as json]))
+            [cheshire.core :as json]
+            [slingshot.slingshot :refer [try+ throw+]]))
 
 
 (def config {:retry-time 1000
@@ -17,14 +18,25 @@
 (def ts-url "http://www.thesaurus.com/browse/")
 
 
+;; for urls
 (defn try-n-times [f n]
   (if (zero? n)
-    (f)
-    (try
-      (f)
-      (catch Throwable _
-        (do (Thread/sleep (:retry-time config))
-            (try-n-times f (dec n)))))))
+    ;;(f)
+    ""
+    (try+
+     (f)
+     (catch [:status 403] _;;{:keys [request-time headers body]}
+       ;;(println "403" request-time headers)
+       "")
+     (catch [:status 404] _;;{:keys [request-time headers body]}
+       ;;(println "NOT Found 404" request-time headers body)
+       "")
+     (catch Object _
+       (do
+         ;;(println (:throwable &throw-context) "unexpected error")
+         (println "unexpected error")
+         (Thread/sleep (:retry-time config))
+         (try-n-times f (dec n)))))))
 
 (defmacro try3 [& body]
   `(try-n-times (fn [] ~@body) 10))
@@ -34,7 +46,7 @@
 
 (def client-headers {"User-Agent" "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:48.0) Gecko/20100101 Firefox/48.0"})
 
-(def english-articles #{"his" "ago" "of" "up" "off" "theirs" "yours" "mine" "by" "away" "about" "they" "near to" "without" "for" "my" "short" "circa" "a" "on" "notwithstanding" "from" "with" "through" "aside" "your" "to" "hence" "apart" "as" "at" "her" "in" "adjacent to" "on account of" "us" "them" "me" "you" "do" "the" "are" "our" "their" "it" "I" "and" "over" "be" "there" "here" "is" "s" "that" "he" "has" "have" "an" "t" "was" "all" "its" "two" "three" "into" "than" "more" "if" "also" "or" "when" "then" "each" "across" "out" "where" "can" "one" "this" "not" "these" "non" "most" "will"})
+(def english-articles #{"his" "ago" "of" "up" "off" "theirs" "yours" "mine" "by" "away" "about" "they" "near to" "without" "for" "my" "short" "circa" "a" "on" "notwithstanding" "from" "with" "through" "aside" "your" "to" "hence" "apart" "as" "at" "her" "in" "adjacent to" "on account of" "us" "them" "me" "you" "do" "the" "are" "our" "their" "it" "I" "and" "over" "be" "there" "here" "is" "s" "that" "he" "has" "have" "an" "t" "was" "all" "its" "two" "three" "into" "than" "more" "if" "also" "or" "when" "then" "each" "across" "out" "where" "can" "one" "this" "not" "these" "non" "most" "will" "why" "may" "how"})
 
 
 
@@ -48,9 +60,10 @@
 
 (defn parse-html
   [html]
-  (-> html
-      java.io.StringReader.
-      enlive/html-resource))
+  (when-not (empty? html)
+    (-> html
+        java.io.StringReader.
+        enlive/html-resource)))
 
 
 (defn get-html
@@ -86,9 +99,12 @@
                                               "text" term}})
                 :body
                 json/parse-string)]
-    (->> (res "uri")
-         (re-seq #"\w+$")
-         first)))
+    ;;(println "===!!!!!!!!!!! " res " !!!!!!!!111======")
+    (if res
+      (->> (res "uri")
+           (re-seq #"\w+$")
+           first)
+      "")))
 
 
 (defn get-cn-surface [term {:strs [start end surfaceStart]}]
@@ -121,7 +137,8 @@
                                               "rel" rel
                                               "end" (str "/c/en/" term)}})
                 :body
-                json/parse-string)]
+                json/parse-string)
+        res (or res ())]
     (map #(get-cn-surface term %) (res "edges"))))
 
 
@@ -149,18 +166,28 @@
 
 
 (defn google-search [term]
-  (->>
-   (-> (get-html google-url {:query-params {"num" "100"
-                                            "safe" "off"
-                                            "source" "hp"
-                                            "q" term}})
-       (parse-html)
-       (extract-text [[:span (enlive/attr= :class "st")]]))
-   (apply str)
-   clojure.string/lower-case
-   (re-seq #"\b[^\d\W]{3,}\b")
-   (remove english-articles)
-   frequencies))
+  ;;find words next to our term
+  (let [p (re-pattern (str "(\\w+)?\\s*" term "\\s*(\\w+)?"))]
+    (->>
+     (-> (get-html google-url {:query-params {"num" "100"
+                                              "safe" "off"
+                                              "source" "hp"
+                                              "q" term}})
+         (parse-html)
+         (extract-text [[:span (enlive/attr= :class "st")]]))
+     (apply str)
+     clojure.string/lower-case
+     ;;deconstruct and clean
+     (re-seq #"\b[^\d\W]{3,}\b")
+     (remove english-articles)
+     ;;reconstruct and analyze
+     (interpose " ")
+     (apply str)
+     (re-seq p)
+     (mapcat rest)
+     (remove nil?)
+     (remove #{"s"})
+     frequencies)))
 
 
 (defn generate [search-terms]
@@ -195,7 +222,8 @@
                     reverse
                     (take (:google-size config))
                     (map first)
-                    distinct)]
+                    ;;distinct
+                    )]
     {:google google
      :conceptnet cn
      :thesaurus ts}))
@@ -220,6 +248,19 @@
 ;;TODO
 ;; - wiktionary
 ;; - again lib
-;; - handle exceptions and clj-http 404
+;; - deal with those network errors better...
 
 
+
+#_(defn wrap-unknown-host
+  "Middleware ignoring unknown hosts when the :ignore-unknown-host? option
+  is set."
+  [client]
+  (fn [req]
+    (try
+      (client req)
+      (catch Exception e
+        (if (= (type (root-cause e)) UnknownHostException)
+          (when-not (opt req :ignore-unknown-host)
+            (throw (root-cause e)))
+          (throw (root-cause e)))))))
