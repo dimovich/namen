@@ -10,29 +10,30 @@
             [slingshot.slingshot :refer [try+ throw+]]))
 
 
-(def config {:retry-time 500
+(def config {:retry-time 2000
              :google-size 50})
 
+(defn now [] (.getSeconds (new java.util.Date)))
+(def http-timer (atom (now)))
 
 (def google-url "https://www.google.com/search")
 (def ts-url "http://www.thesaurus.com/browse/")
+(def ds-url "https://api.deusu.org/v1/query")
 
 
 ;; for urls
 (defn try-n-times [f n]
   (if (zero? n)
     ;;(f)
-    ""
+    {:body ""}
     (try+
      (f)
      (catch [:status 403] {:keys [request-time headers body]}
        ;;(println "403" request-time headers)
-       {:body ""}
-       )
+       {:body ""})
      (catch [:status 404] {:keys [request-time headers body]}
        ;;(println "NOT Found 404" request-time headers body)
-       {:body ""}
-       )
+       {:body ""})
      (catch Object _
        (do
         ;; (println (:throwable &throw-context) "unexpected error")
@@ -56,8 +57,12 @@
 
 (defn http-get [url opts]
   (let [opts (assoc opts :throw-entire-message? true :headers client-headers)]
-    (try3 (client/get url opts))))
+    (try3 (client/get url opts))
+    ;;(reset! http-timer (now))
+    ))
 
+#_(if (>= 1 (Math/abs (- (now) @http-timer))))
+      
 
 
 (defn parse-html
@@ -79,6 +84,25 @@
 (defn extract-text [dom selectors]
   (for [st (enlive/select dom [selectors])]
     (enlive/text st)))
+
+
+(defn term-search [term s]
+  (let [p (re-pattern (str "(\\w+)?\\s*" term "\\s*(\\w+)?"))]
+    (->> s
+         clojure.string/lower-case
+         ;;deconstruct and clean
+         (re-seq #"\b[^\d\W]{3,}\b")
+         (remove english-articles)
+         ;;reconstruct and analyze
+         (interpose " ")
+         (apply str)
+         (re-seq p)
+         (mapcat rest)
+         (remove nil?)
+         (remove #{"s"})
+         frequencies)))
+
+
 
 
 ;;
@@ -158,6 +182,26 @@
          (res "similar"))))
 
 
+
+;;
+;; DeuSu
+;;
+(defn ds-search [term]
+  (let [r (->> (http-get ds-url {:query-params {"p" 10
+                                                "pc" 10
+                                                "q" "hello"}
+                                 :insecure? true})
+               :body
+               (re-seq #"snippet=(.*)")
+               (map second)
+               (apply str))
+        r1 (term-search term r)
+        r2 (term-search (cn-normalize term) r)]
+    [r1 r2]))
+
+
+
+
 (defn get-combinations [words]
   (->> words
        count
@@ -165,6 +209,9 @@
        (range 1)
        (mapcat #(math/combinations words %))
        (map #(->> % (interpose " ") (apply str)))))
+
+
+
 
 
 (defn google-search [term]
@@ -178,18 +225,7 @@
          (parse-html)
          (extract-text [[:span (enlive/attr= :class "st")]]))
      (apply str)
-     clojure.string/lower-case
-     ;;deconstruct and clean
-     (re-seq #"\b[^\d\W]{3,}\b")
-     (remove english-articles)
-     ;;reconstruct and analyze
-     (interpose " ")
-     (apply str)
-     (re-seq p)
-     (mapcat rest)
-     (remove nil?)
-     (remove #{"s"})
-     frequencies)))
+     (term-search term))))
 
 
 (defn generate [search-terms]
@@ -216,16 +252,16 @@
         ts (mapcat #(ts-search %) search-terms)
 
         ;; Google
-        google '() #_(->> search-terms
-                          get-combinations
-                          (map #(google-search %))
-                          (reduce #(merge-with + %1 %2))
-                          (sort-by val)
-                          reverse
-                          (take (:google-size config))
-                          (map first)
-                          ;;distinct
-                          )]
+        google (->> search-terms
+                    get-combinations
+                    (map #(google-search %))
+                    (reduce #(merge-with + %1 %2))
+                    (sort-by val)
+                    reverse
+                    (take (:google-size config))
+                    (map first)
+                    ;;distinct
+                    )]
     {:google google
      :conceptnet cn
      :thesaurus ts}))

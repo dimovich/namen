@@ -40,7 +40,9 @@
     (fn [m [k v]]
       (assoc m
              k
-             (vec (remove (fn [[_ visible]]  (if invert (not visible) visible)) v)))) 
+             (vec (map (fn [[v selected]]
+                         [v 0])
+                       (remove (fn [[_ selected]]  (if invert (not selected) selected)) v))))) 
     {} xs)))
 
 ;;
@@ -82,6 +84,7 @@
 
 
 (defn word-list [data white]
+  @app
   (let [cc 3
         batch (js/Math.ceil (/ (count @data) cc))
         md (/ 12 cc)]
@@ -97,7 +100,7 @@
                        (fn [idx [word visible]]
                          ^{:key (str (+ idx count) word)}
                          [:div
-                          [(keyword (str "span.word" (when-not visible (if white ".mywhite" ".myblack"))))
+                          [(keyword (str "span.word" (when-not visible (if @white ".mywhite" ".myblack"))))
                            {:on-click #(swap! data update-in
                                               [(+ idx count) 1]
                                               not)}
@@ -121,7 +124,8 @@
 (defn main-form [state]
   (let [thesaurus (r/cursor state [:results :thesaurus])
         conceptnet (r/cursor state [:results :conceptnet])
-        ;; google (r/cursor state [:results :google])
+        ;;google (r/cursor state [:results :google])
+        deusu (r/cursor state [:results :deusu])
         white (r/cursor state [:white])]
     (fn []
       [grid
@@ -163,12 +167,12 @@
                     :default-expanded true}
              [word-list conceptnet white]]]]
 
-          #_[row
+          [row
              [col {:md 12}
-              [panel {:header "Google"
+              [panel {:header "DeuSu"
                       :collapsible true
                       :default-expanded true}
-               [word-list google]]]]
+               [word-list deusu]]]]
 
           [row
            [col {:md 12}
