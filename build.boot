@@ -20,7 +20,8 @@
                  [cljsjs/react-bootstrap "0.30.2-0"]
                  [cheshire "5.6.3"]
                  [cljs-ajax "0.5.8"]
-                 [slingshot "0.12.2"]])
+                 [slingshot "0.12.2"]
+                 [org.clojure/core.async "0.2.391"]])
 
 (require '[adzerk.boot-cljs :refer [cljs]]
          '[pandeiro.boot-http :refer [serve]]

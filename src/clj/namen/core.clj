@@ -7,7 +7,8 @@
             [clojure.math.combinatorics :as math]
             [namen.templates.index :refer [index]]
             [cheshire.core :as json]
-            [slingshot.slingshot :refer [try+ throw+]]))
+            [slingshot.slingshot :refer [try+ throw+]]
+            [clojure.core.async :as async :refer :all]))
 
 
 (def config {:retry-time 2000

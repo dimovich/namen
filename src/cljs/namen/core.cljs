@@ -1,6 +1,7 @@
 (ns namen.core
   (:require [reagent.core :as r :refer [render]]
             [ajax.core :as ajax :refer [GET]]
+            [namen.util :refer [sample]]
             [namen.bootstrap :refer [button navbar navbar-form
                                      form-control form-group form
                                      control-label grid row col
@@ -16,7 +17,7 @@
                   :white true}))
 
 
-(def config {:lessize 30})
+(def config {:lessize 20})
 
 ;;(def by-id (aget js/document "getElementById"))
 
@@ -26,11 +27,11 @@
    (fn [m [k v]]
      (assoc m
             (keyword k)
-            ;;[[word visible] ...]
-            (vec (map #(identity [% true])
-                      (if (:less @app)
-                        (take (:lessize config) v)
-                        v))))) 
+            ;;[[word visible less] ...]
+            (let [s (set (sample (:lessize config) (range (count v))))]
+              (vec
+               (map-indexed #(identity [%2 true (if (s %1) true false)])
+                            v))))) 
    {} xs))
 
 (defn prune-words
@@ -40,9 +41,9 @@
     (fn [m [k v]]
       (assoc m
              k
-             (vec (map (fn [[v selected]]
-                         [v 0])
-                       (remove (fn [[_ selected]]  (if invert (not selected) selected)) v))))) 
+             (vec (map (fn [[v _ less]]
+                         [v 0 less])
+                       (remove (fn [[_ selected _]]  (if invert (not selected) selected)) v))))) 
     {} xs)))
 
 ;;
@@ -83,9 +84,12 @@
                           :on-click #(handle-words @text)}]]]])))
 
 
-(defn word-list [data white]
-  @app
-  (let [cc 3
+(defn word-list [data]
+;;  @app
+  (let [ ;;data ()
+        white (:white @app)
+        less (:less @app)
+        cc 3
         batch (js/Math.ceil (/ (count @data) cc))
         md (/ 12 cc)]
     (loop [count 0
@@ -97,14 +101,15 @@
                (conj content
                      [col {:md md}
                       (map-indexed
-                       (fn [idx [word visible]]
-                         ^{:key (str (+ idx count) word)}
-                         [:div
-                          [(keyword (str "span.word" (when-not visible (if @white ".mywhite" ".myblack"))))
-                           {:on-click #(swap! data update-in
-                                              [(+ idx count) 1]
-                                              not)}
-                           word]])
+                       (fn [idx [word visible lss]]
+                         (when (or (and lss less) (not less))
+                           ^{:key (str (+ idx count) word)}
+                           [:div
+                            [(keyword (str "span.word" (when-not visible (if white ".mywhite" ".myblack"))))
+                             {:on-click #(swap! data update-in
+                                                [(+ idx count) 1]
+                                                not)}
+                             word]]))
                        (take batch xs))]))))))
 
 
@@ -124,9 +129,8 @@
 (defn main-form [state]
   (let [thesaurus (r/cursor state [:results :thesaurus])
         conceptnet (r/cursor state [:results :conceptnet])
-        ;;google (r/cursor state [:results :google])
-        deusu (r/cursor state [:results :deusu])
-        white (r/cursor state [:white])]
+        google (r/cursor state [:results :google])
+        deusu (r/cursor state [:results :deusu])]
     (fn []
       [grid
        [row
@@ -136,23 +140,24 @@
         [col {:md 8}
          [input-form state]]]
        [row
-        [col {:md 3;; :sm-offset 1
+        [col {:md 2  :md-offset 1
               }
          [:center
-          [:span "less "]
-          [:label.switch 
+          [:label ;;.switch 
            [:input {:type "checkbox":id "lessmore"
                     :on-click #(swap! state update :less not)}]
-           [:span.slider.round]]
-          [:span "  more"]]]
+           ;;           [:span.slider.round]
+           ]
+          [:span "  more"]
+          ]]
 
         [col {:md 3}
          [:center
-          [:span "white"]
-          [:label.switch 
+          [:label ;;.switch 
            [:input {:type "checkbox" :id "whiteblack"
                     :on-click #(swap! state update :white not)}]
-           [:span.slider.round]]
+           ;;[:span.slider.round]
+           ]
           [:span "   black"]]]]
 
        [:p] [:p]
@@ -165,9 +170,9 @@
             [panel {:header "ConceptNet"
                     :collapsible true
                     :default-expanded true}
-             [word-list conceptnet white]]]]
+             [word-list conceptnet]]]]
 
-          [row
+          #_[row
              [col {:md 12}
               [panel {:header "DeuSu"
                       :collapsible true
@@ -176,10 +181,17 @@
 
           [row
            [col {:md 12}
+            [panel {:header "Google"
+                    :collapsible true
+                    :default-expanded true}
+             [word-list google]]]]
+
+          [row
+           [col {:md 12}
             [panel {:header "Thesaurus"
                     :collapsible true
                     :default-expanded true}
-             [word-list thesaurus white]]]]]
+             [word-list thesaurus]]]]]
          
          [col {:md 3 :sm-offset 1 :class "sidebar-outer"}
           [col {:md 3 :class "fixed"}
@@ -206,4 +218,5 @@
 ;;
 ;; - CSS columns instead of manually dividing the list
 ;; - recover from blocked remote procedure
+;; - try normal get from cljs-http
 ;;
