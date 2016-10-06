@@ -8,18 +8,38 @@
             [namen.templates.index :refer [index]]
             [cheshire.core :as json]
             [slingshot.slingshot :refer [try+ throw+]]
-            [clojure.core.async :as async :refer :all]))
+            [clojure.core.async :as async :refer [go <! >! >!! <!! chan timeout]]))
 
 
 (def config {:retry-time 2000
              :google-size 50})
 
-(defn now [] (.getSeconds (new java.util.Date)))
-(def http-timer (atom (now)))
+
+;;
+;; delayed execution
+;;
+(let [c (chan)
+      d (chan)]
+  (defn timebuff [expr]
+    (<!! (go
+           (>! c expr)
+           (<! d))))
+
+  (defn timebuff-loop []
+    (async/go-loop []
+      (let [x (<! c)]
+        (>! d x)
+        (<! (timeout 1000))
+        (recur))))
+
+  (timebuff-loop))
+
+
 
 (def google-url "https://www.google.com/search")
 (def ts-url "http://www.thesaurus.com/browse/")
 (def ds-url "https://api.deusu.org/v1/query")
+
 
 
 ;; for urls

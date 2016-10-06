@@ -85,9 +85,8 @@
 
 
 (defn word-list [data]
-;;  @app
-  (let [ ;;data ()
-        white (:white @app)
+  ;;  @app
+  (let [white (:white @app)
         less (:less @app)
         cc 3
         batch (js/Math.ceil (/ (count @data) cc))
