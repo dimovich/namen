@@ -218,4 +218,6 @@
 ;; - CSS columns instead of manually dividing the list
 ;; - recover from blocked remote procedure
 ;; - try normal get from cljs-http
+;; - save search
+;; - print
 ;;
