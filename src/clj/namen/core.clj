@@ -5,10 +5,28 @@
             [clj-http.client :as client]
             [net.cgrand.enlive-html :as enlive]
             [clojure.math.combinatorics :as math]
-            [namen.templates.index :refer [index]]
             [cheshire.core :as json]
+            [hiccup.page :refer [html5 include-css include-js]]
             [slingshot.slingshot :refer [try+ throw+]]
-            [clojure.core.async :as async :refer [go <! >! >!! <!! chan timeout]]))
+            [clojure.core.async :as async :refer [go <! >! >!! <!! chan timeout]])
+
+  (:gen-class))
+
+
+
+(defn frontend []
+  (html5
+   {:lang "en"}
+   [:head
+    [:title "Word.what?"]
+    (include-css "assets/css/wordizer.css")
+    (include-css "assets/css/bootstrap.min.css")]
+   [:body
+    [:div.wrap
+     [:div#app]]
+    [:span#span-measure]
+    (include-js "wordizer.js")]))
+
 
 
 (def config {:retry-time 2000
@@ -290,7 +308,7 @@
 
 
 (defroutes handler
-  (GET "/" [] (index)) ;; for testing only
+  (GET "/" [] (frontend)) ;; for testing only
   (GET "/generate" xs (json/generate-string
                        (generate (-> xs :params :words vals))))
   (files "/" {:root "target"})     ;; to serve static resources

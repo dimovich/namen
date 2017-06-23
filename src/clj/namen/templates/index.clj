@@ -3,5 +3,5 @@
                                             html-content]]))
 
 
-(deftemplate index "index.html"
-  [])
+#_(deftemplate index "index.html"
+    [])

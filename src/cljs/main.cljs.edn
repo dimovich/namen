@@ -1,3 +1,2 @@
 {:require [namen.core]
- :init-fns [namen.core/init]
- :compiler-options {:optimizations :advanced}}
+ :init-fns [namen.core/init]}
