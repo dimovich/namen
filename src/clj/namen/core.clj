@@ -7,10 +7,7 @@
             [clojure.math.combinatorics :as math]
             [cheshire.core :as json]
             [hiccup.page :refer [html5 include-css include-js]]
-            [slingshot.slingshot :refer [try+ throw+]]
-            [clojure.core.async :as async :refer [go <! >! >!! <!! chan timeout]])
-
-  (:gen-class))
+            [slingshot.slingshot :refer [try+ throw+]]))
 
 
 
@@ -19,38 +16,18 @@
    {:lang "en"}
    [:head
     [:title "Word.what?"]
-    (include-css "assets/css/wordizer.css")
+    (include-css "assets/css/namen.css")
     (include-css "assets/css/bootstrap.min.css")]
    [:body
     [:div.wrap
      [:div#app]]
     [:span#span-measure]
-    (include-js "wordizer.js")]))
+    (include-js "namen.js")]))
 
 
 
 (def config {:retry-time 2000
              :google-size 50})
-
-
-;;
-;; delayed execution
-;;
-(let [c (chan)
-      d (chan)]
-  (defn timebuff [expr]
-    (<!! (go
-           (>! c expr)
-           (<! d))))
-
-  (defn timebuff-loop []
-    (async/go-loop []
-      (let [x (<! c)]
-        (>! d x)
-        (<! (timeout 1000))
-        (recur))))
-
-  (timebuff-loop))
 
 
 

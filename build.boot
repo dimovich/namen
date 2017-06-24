@@ -1,6 +1,6 @@
 (set-env!
  :source-paths #{"src/clj" "src/cljs"}
- :resource-paths #{"resources"}
+ :resource-paths #{"resources" "src/clj"}
 
  :dependencies '[[org.clojure/clojure "1.8.0"]
                  [org.clojure/clojurescript "1.9.229"]
@@ -24,8 +24,8 @@
                  [cljsjs/react-bootstrap "0.30.2-0"]
                  [cheshire "5.6.3"]
                  [cljs-ajax "0.5.8"]
-                 [slingshot "0.12.2"]
-                 [org.clojure/core.async "0.2.391"]])
+                 [slingshot "0.12.2"]])
+
 
 (require '[adzerk.boot-cljs :refer [cljs]]
          '[pandeiro.boot-http :refer [serve]]
@@ -44,7 +44,9 @@
 
 (task-options!
  pom {:project 'namen
-      :version "0.1.0"})
+      :version "0.1.0"}
+ jar  {:file "namen.jar"}
+ sift {:include #{#"namen.jar" #"assets" #"namen.js"}})
 
 
 (deftask production
@@ -69,8 +71,7 @@
   (comp (aot  :namespace #{'namen.core})
         (uber)
         (jar)
-;;        (sift :include #{#"namen.*jar" #"main.js"})
-        ))
+        (sift)))
 
 
 (deftask run []
