@@ -268,16 +268,16 @@
         ts (mapcat #(ts-search %) search-terms)
 
         ;; Google
-        google (->> search-terms
-                    get-combinations
-                    (map #(google-search %))
-                    (reduce #(merge-with + %1 %2))
-                    (sort-by val)
-                    reverse
-                    (take (:google-size config))
-                    (map first)
-                    ;;distinct
-                    )]
+        google nil #_(->> search-terms
+                          get-combinations
+                          (map #(google-search %))
+                          (reduce #(merge-with + %1 %2))
+                          (sort-by val)
+                          reverse
+                          (take (:google-size config))
+                          (map first)
+                          ;;distinct
+                          )]
     {:google google
      :conceptnet cn
      :thesaurus ts}))

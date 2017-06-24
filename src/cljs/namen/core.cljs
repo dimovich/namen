@@ -13,7 +13,7 @@
 ;; app state
 (def app (r/atom {:results {}
                   :results-visible false
-                  :less true
+                  :less false
                   :white true}))
 
 
@@ -132,9 +132,10 @@
         deusu (r/cursor state [:results :deusu])]
     (fn []
       [grid
-       [row
-        [col {:md 8}
-         [page-header ""]]]
+       #_[row
+          [col {:md 8}
+           [page-header ""]]]
+       [:br]
        [row
         [col {:md 8}
          [input-form state]]]
@@ -178,12 +179,12 @@
                       :default-expanded true}
                [word-list deusu]]]]
 
-          [row
-           [col {:md 12}
-            [panel {:header "Google"
-                    :collapsible true
-                    :default-expanded true}
-             [word-list google]]]]
+          #_[row
+             [col {:md 12}
+              [panel {:header "Google"
+                      :collapsible true
+                      :default-expanded true}
+               [word-list google]]]]
 
           [row
            [col {:md 12}
