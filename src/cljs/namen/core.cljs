@@ -14,7 +14,7 @@
 (def app (r/atom {:results {}
                   :results-visible false
                   :less false
-                  :white true}))
+                  :white false}))
 
 
 (def config {:lessize 20})
@@ -71,6 +71,7 @@
         [form-control {:type "text"
                        :placeholder "insert keywords"
                        :value @text
+                       :auto-focus true
                        :on-change #(reset! text (-> % .-target .-value))
                        :on-key-press (fn [e]
                                        (when (= 13 (.-charCode e))
@@ -139,28 +140,27 @@
        [row
         [col {:md 8}
          [input-form state]]]
-       [row
-        [col {:md 2  :md-offset 1
-              }
-         [:center
-          [:label ;;.switch 
-           [:input {:type "checkbox":id "lessmore"
-                    :on-click #(swap! state update :less not)}]
-           ;;           [:span.slider.round]
-           ]
-          [:span "  more"]
-          ]]
+       #_[row
+          [col {:md 2  :md-offset 1}
+           [:center
+            [:label ;;.switch 
+             [:input {:type "checkbox":id "lessmore"
+                      :on-click #(swap! state update :less not)}]
+             ;;           [:span.slider.round]
+             ]
+            [:span "  more"]
+            ]]
 
-        [col {:md 3}
-         [:center
-          [:label ;;.switch 
-           [:input {:type "checkbox" :id "whiteblack"
-                    :on-click #(swap! state update :white not)}]
-           ;;[:span.slider.round]
-           ]
-          [:span "   black"]]]]
+          [col {:md 3}
+           [:center
+            [:label ;;.switch 
+             [:input {:type "checkbox" :id "whiteblack"
+                      :on-click #(swap! state update :white not)}]
+             ;;[:span.slider.round]
+             ]
+            [:span "   black"]]]]
 
-       [:p] [:p]
+       [:br] [:br]
    
        [fade {:in (:results-visible @state)}
         [row
@@ -194,9 +194,8 @@
              [word-list thesaurus]]]]]
          
          [col {:md 3 :sm-offset 1 :class "sidebar-outer"}
-          [col {:md 3 :class "fixed"}
-           [action-menu state]]]
-         ]]])))
+          [col {:md 6 :class "fixed"}
+           [action-menu state]]]]]])))
 
 
 
