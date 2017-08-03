@@ -2,10 +2,10 @@
  :source-paths #{"src/clj" "src/cljs"}
  :resource-paths #{"resources" "src/clj"}
 
- :dependencies '[[org.clojure/clojure "1.8.0"         :scope "provided"]
-                 [org.clojure/clojurescript "1.9.229" :scope "provided"]
+ :dependencies '[[org.clojure/clojure "1.9.0-alpha17" :scope "provided"]
+                 [org.clojure/clojurescript "1.9.854" :scope "provided"]
 
-                 [adzerk/boot-cljs          "2.0.0"      :scope "test"]
+                 [adzerk/boot-cljs          "2.1.1"      :scope "test"]
                  [adzerk/boot-cljs-repl     "0.3.2"      :scope "test"]
                  [adzerk/boot-reload        "0.5.1"      :scope "test"]
                  [pandeiro/boot-http        "0.8.3"      :scope "test"]
@@ -13,6 +13,7 @@
                  [org.clojure/tools.nrepl   "0.2.13"     :scope "test"]
                  [weasel                    "0.7.0"      :scope "test"]
                  [tolitius/boot-check       "0.1.4"      :scope "test"]
+                 [boot-deps                 "0.1.6"      :scope "test"]
 
                  [javax.servlet/servlet-api "3.0-alpha-1"]
                  [org.clojure/math.combinatorics "0.1.3"]
@@ -23,9 +24,11 @@
                  [slingshot "0.12.2"]
                  [clj-http "2.2.0"]
 
-                 [reagent "0.6.0"  :scope "provided"]
+                 [reagent "0.6.2"  :scope "provided" :exclusions [cljsjs/react cljsjs/react-dom]]
+                 
                  [cljs-ajax "0.5.8" :scope "provided"]
-                 [cljsjs/react-bootstrap "0.30.2-0" :scope "provided"]])
+                 ;;[cljsjs/react-bootstrap "0.30.2-0" :scope "provided"]
+                 ])
 
 
 (require '[adzerk.boot-cljs :refer [cljs]]
@@ -35,9 +38,8 @@
          'boot.repl)
 
 
-
 (swap! boot.repl/*default-dependencies*
-       concat '[[cider/cider-nrepl "0.15.0-SNAPSHOT"]])
+       concat '[[cider/cider-nrepl "0.15.0"]])
 
 (swap! boot.repl/*default-middleware*
        conj 'cider.nrepl/cider-middleware)
@@ -111,3 +113,5 @@
   (comp (pom)
         (jar)
         (install)))
+
+

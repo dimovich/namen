@@ -1,2 +1,13 @@
 {:require [namen.core]
- :init-fns [namen.core/init]}
+ :init-fns [namen.core/init]
+ :compiler-options {:parallel-build true
+                    :install-deps true
+                    :npm-deps {:react "15.6.1"
+                               :react-dom "15.6.1"
+                               ;;:react-bootstrap "0.31.1"
+                               :react-resizable-box "2.0.4"
+                               :semantic-ui-react "0.68.5"}}}
+
+
+
+

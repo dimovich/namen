@@ -1,6 +1,13 @@
 (ns namen.bootstrap
   (:require [reagent.core :as r]
-            [cljsjs.react-bootstrap]))
+            ;;[cljsjs.react-bootstrap]
+            ;;["react-bootstrap" :refer [Button]]
+            [react]
+            [react-dom]
+            [semantic-ui-react]
+            [react-resizable-box]
+            ;;[react-draggable]
+            ))
 
 
 (defn bootstrap [& args]
